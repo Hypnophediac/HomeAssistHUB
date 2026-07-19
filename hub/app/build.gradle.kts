@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application") version "8.5.2"
     id("org.jetbrains.kotlin.android") version "1.9.24"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
 }
 
@@ -43,6 +44,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/io.netty.versions.properties"
         }
     }
 }
@@ -78,6 +81,13 @@ dependencies {
     implementation("io.socket:socket.io-client:2.1.1") {
         exclude(group = "org.json", module = "json")
     }
+
+    // Local LAN API (Ktor Server/Netty) for discovery + device credential management
+    implementation("io.ktor:ktor-server-core:2.3.12")
+    implementation("io.ktor:ktor-server-netty:2.3.12")
+    implementation("io.ktor:ktor-server-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // EncryptedSharedPreferences (device credential storage)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

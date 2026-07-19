@@ -12,12 +12,14 @@ import androidx.core.app.NotificationCompat
 import com.homeassisthub.hub.HubApplication
 import com.homeassisthub.hub.MainActivity
 import com.homeassisthub.hub.R
+import com.homeassisthub.hub.api.HubApiServer
 import com.homeassisthub.hub.bridge.CommandRouter
 import com.homeassisthub.hub.bridge.HubSocketClient
 import com.homeassisthub.hub.controller.DeviceControllerFactory
 import com.homeassisthub.hub.controller.P1MeterController
 import com.homeassisthub.hub.data.HubConfigStore
 import com.homeassisthub.hub.data.db.AppDatabase
+import com.homeassisthub.hub.discovery.DiscoveryManager
 import com.homeassisthub.hub.security.SecureCredentialStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +45,8 @@ class HubForegroundService : Service() {
     private val p1Dao by lazy { AppDatabase.getInstance(applicationContext).p1Dao() }
     private val controllerFactory by lazy { DeviceControllerFactory(p1Dao, serviceScope) }
     private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory) }
+    private val discoveryManager by lazy { DiscoveryManager(applicationContext) }
+    private val apiServer by lazy { HubApiServer(discoveryManager, credentialStore, p1Dao) }
 
     private var hubSocketClient: HubSocketClient? = null
     private val p1Pollers = mutableListOf<P1MeterController>()
@@ -60,6 +64,7 @@ class HubForegroundService : Service() {
             }
             else -> {
                 startForeground(NOTIFICATION_ID, buildNotification())
+                apiServer.start()
                 startP1MeterPollers()
                 connectToRelay()
             }
@@ -70,6 +75,7 @@ class HubForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        apiServer.stop()
         hubSocketClient?.disconnect()
         p1Pollers.forEach { it.stopPolling() }
         p1Pollers.clear()

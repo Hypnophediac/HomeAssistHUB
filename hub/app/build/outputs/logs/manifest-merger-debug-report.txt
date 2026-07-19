@@ -4,55 +4,55 @@ ADDED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifes
 INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml:2:1-39:12
 INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml:2:1-39:12
 INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml:2:1-39:12
-MERGED from [androidx.activity:activity:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/718a965ad19ba8f3b02a4cdd027defef/transformed/activity-1.9.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.activity:activity-ktx:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/ce4097c94a474b61b4ad1fce0993d780/transformed/activity-ktx-1.9.1/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.material3:material3-android:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/974700bbb18cd1c59f6e0f74bf095afc/transformed/material3-release/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.compose.material:material-ripple-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ca78a3909700c1336b28f5f0306b7e07/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.material:material-icons-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/3163354f22726687d7c613f635247230/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.material:material-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/989d29c088d92d69fb5ba573fac6cc44/transformed/material-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.animation:animation-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/7dbc46526fcac86c01492b5816af78b2/transformed/animation-core-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.animation:animation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a43087d49a956ed5cfecf48240767c7c/transformed/animation-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/f468baea534e777a33b138d5f69f4625/transformed/foundation-layout-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.foundation:foundation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/e7e7ed874018fde516dc4dddf2883e63/transformed/foundation-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/9e3bd26d62d5c1d0e67faff678e19169/transformed/ui-tooling-data-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-unit-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a380ffc917509ca50d4aded464cd3407/transformed/ui-unit-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-geometry-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/33db2695b7ceaf4fb9f74ab912f9fcea/transformed/ui-geometry-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-util-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/c1fb92fdb126fe8a5b8fc4c957b88e3d/transformed/ui-util-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-text-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/8cc346ebdd99117c28d380a9a4a651da/transformed/ui-text-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-graphics-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ffde672ece4bcf7609a74196d02c7841/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0aff3c66377cabf1c1eb16fa8552a3ad/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:17:1-28:12
-MERGED from [androidx.activity:activity-compose:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/ee4d630d0fff2b9b8ee3b01844f85de1/transformed/activity-compose-1.9.1/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5e98ec758248ba037820c4b1e9e9e3b0/transformed/ui-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.autofill:autofill:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/e85618da35cb03dec05a1cae6a1b7d10/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:17:1-35:12
-MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:17:1-30:12
-MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/f5c138314d6e72ee3125afe0d5a5dc75/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/fa1bad503b7b70f86908f10bc178cb8f/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.savedstate:savedstate:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/e1079c03c61f893c62dba2f24a7f13c9/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:17:1-35:12
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/fd3ca800d641fe93b83a6de7c5ab343a/transformed/lifecycle-livedata-core-2.8.4/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/c9f255c68d3a21f352c70eb07a14da8d/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d832167b3987b27e30df28f4e2d2d42f/transformed/lifecycle-viewmodel-ktx-2.8.4/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dce3bd7f33179cdaba04e65ac09ee838/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-service:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d1cdd2cfd762c247494b03ab8a4ab7f8/transformed/lifecycle-service-2.8.4/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/93e642fce50d14df67fd3870dbd12cd4/transformed/lifecycle-runtime-release/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/397e95b14eb0b7f93ce3b8beff93809b/transformed/lifecycle-viewmodel-savedstate-2.8.4/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.core:core-ktx:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/8e084323f46282521cd8f53c2c919674/transformed/core-ktx-1.13.1/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:17:1-31:12
-MERGED from [androidx.room:room-ktx:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/6d952dd00ce8030ff136eb3c89c42cf8/transformed/room-ktx-2.6.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0989b06c877078f692b0fe452cc48782/transformed/runtime-saveable-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.runtime:runtime-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/df9aa44a074f32836a408ddb929671f8/transformed/runtime-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/e0c195bc4bd35f98a336df4c7f36e006/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.sqlite:sqlite:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/0d29c3ebd983c7d55622260b7caf050c/transformed/sqlite-2.4.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/930ea407cc2d6a22316554987fdc8311/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/hypno/.gradle/caches/9.6.1/transforms/87eab722f3f23d302e1f100d486706d3/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/hypno/.gradle/caches/9.6.1/transforms/1bb410c7ade65c5ee7fc762a94447c2f/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.interpolator:interpolator:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/23efa6c38f68bf0238894b2c16a3ed1d/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/cdc3f4a2d187854b6f6204c2c050048f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:17:1-55:12
-MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/6e89cc1f41e1a3a30df7ceed1d560750/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
-MERGED from [androidx.tracing:tracing:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/2d63f0a01895848ede00d2bdf18f07f5/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.activity:activity:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/e0d911d77e21e77345d51bdba3443789/transformed/activity-1.9.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-ktx:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/a91ae8c90eb7069e6f2d787c156ac908/transformed/activity-ktx-1.9.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material3:material3-android:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/9825bcca01075d244eaf88bdf0f08728/transformed/material3-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.material:material-ripple-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/364e2bfcc071b6fc15f0765ffe6508fe/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/275a9e49f13727d63ad36068c9be0a76/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a0edca69763a8db3c2e140be444c6019/transformed/material-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5fad4944c56fa208359076d49a061d5d/transformed/animation-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/603b488825b3208f5c9597183978b7d0/transformed/animation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/54daebab3f98c97f1fe18623e0789ced/transformed/foundation-layout-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/922ba271c3c048062420b4ca15a9b655/transformed/foundation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/acb7e96e5da55a45c424104fb84ace43/transformed/ui-tooling-data-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0a5c5d1a2ae708f63035818214b90fbe/transformed/ui-unit-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5e90c0a2def098676ec9e49be80eca17/transformed/ui-geometry-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/8298c2be305d3c47e9b7c1cd602d7699/transformed/ui-util-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/c0de432631f87347ccdc1705db2f24ed/transformed/ui-text-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/dce9433ef34227f8f2b30f951ff0f323/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/cdb80135651c8c0fdc04d9f8e6eeea17/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:17:1-28:12
+MERGED from [androidx.activity:activity-compose:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/dc0e08bd4242c9e0268543206f67fab1/transformed/activity-compose-1.9.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/b90f42d78dafcaf5823a840a1cc0cdb0/transformed/ui-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.autofill:autofill:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/479733f76e4873cee727002b815b548e/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/dad1f320ff9e6ebc2dc4700ebaf79aa6/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/b2de3d7ca1874517c9cdeffe134c4a6d/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/6acf9bb50f23484fa73e0d689bad8a63/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/9a02970c2cce6e0e14cca85ef23d9a29/transformed/lifecycle-livedata-core-2.8.4/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/03f753ab47ba645de9c66a7e7ae128af/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/9d3590553b35031da1d8c37e59fc23d8/transformed/lifecycle-viewmodel-ktx-2.8.4/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d440d0bf7158ab4bd3a5322988a5a5ab/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-service:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/5ef8130d3d9a4cad9727a50ff44b03fc/transformed/lifecycle-service-2.8.4/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/661190aeba0610f36fd8afb5465631be/transformed/lifecycle-runtime-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/bb962a01b7e14227a6038b9663a0fe89/transformed/lifecycle-viewmodel-savedstate-2.8.4/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core-ktx:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f9c150c5ab3c3f11654a6e28a46a6a0/transformed/core-ktx-1.13.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.room:room-ktx:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/c653ab194e6890b9be8f1f0ed16f820f/transformed/room-ktx-2.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/e9f6b075600753157c63cb215b96e927/transformed/runtime-saveable-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/9da258fa6283618a9678b8271cecb128/transformed/runtime-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/00052a3f4650e481b28cee5a41ba79a4/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.sqlite:sqlite:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/1f1c46379c46554e1695e4c0a812818b/transformed/sqlite-2.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/d0d0d231fc82e742c175ba27feffd579/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/hypno/.gradle/caches/9.6.1/transforms/1da853eb42f10d5fa10dc06c99f4d6de/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/hypno/.gradle/caches/9.6.1/transforms/831b6a67f6bdde7946d70b3fa33959af/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/1d05a6def726ee988c1b5741af54f24f/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/802a78466e11ec3b47c6b656152dd4be/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/e2ab0cad7f158d3343c27c3e21a1bd75/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/3b7e0603e8784339cf0a4dabffd50197/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
 	package
 		INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml
 	android:versionName
@@ -96,26 +96,26 @@ ADDED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifes
 application
 ADDED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml:13:5-37:19
 INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml:13:5-37:19
-MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
-MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
-MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
-MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
-MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
-MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/cdc3f4a2d187854b6f6204c2c050048f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/cdc3f4a2d187854b6f6204c2c050048f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
-MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/6e89cc1f41e1a3a30df7ceed1d560750/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
-MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/6e89cc1f41e1a3a30df7ceed1d560750/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/802a78466e11ec3b47c6b656152dd4be/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/802a78466e11ec3b47c6b656152dd4be/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/e2ab0cad7f158d3343c27c3e21a1bd75/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/e2ab0cad7f158d3343c27c3e21a1bd75/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
 	android:extractNativeLibs
 		INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml
 	android:appComponentFactory
-		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
+		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
 	android:supportsRtl
 		ADDED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml:20:9-35
 	android:label
@@ -160,211 +160,211 @@ uses-sdk
 INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml
 INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml
-MERGED from [androidx.activity:activity:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/718a965ad19ba8f3b02a4cdd027defef/transformed/activity-1.9.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.activity:activity:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/718a965ad19ba8f3b02a4cdd027defef/transformed/activity-1.9.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.activity:activity-ktx:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/ce4097c94a474b61b4ad1fce0993d780/transformed/activity-ktx-1.9.1/AndroidManifest.xml:5:5-44
-MERGED from [androidx.activity:activity-ktx:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/ce4097c94a474b61b4ad1fce0993d780/transformed/activity-ktx-1.9.1/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material3:material3-android:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/974700bbb18cd1c59f6e0f74bf095afc/transformed/material3-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.material3:material3-android:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/974700bbb18cd1c59f6e0f74bf095afc/transformed/material3-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.material:material-ripple-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ca78a3909700c1336b28f5f0306b7e07/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-ripple-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ca78a3909700c1336b28f5f0306b7e07/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-icons-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/3163354f22726687d7c613f635247230/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-icons-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/3163354f22726687d7c613f635247230/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/989d29c088d92d69fb5ba573fac6cc44/transformed/material-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.material:material-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/989d29c088d92d69fb5ba573fac6cc44/transformed/material-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/7dbc46526fcac86c01492b5816af78b2/transformed/animation-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/7dbc46526fcac86c01492b5816af78b2/transformed/animation-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a43087d49a956ed5cfecf48240767c7c/transformed/animation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a43087d49a956ed5cfecf48240767c7c/transformed/animation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/f468baea534e777a33b138d5f69f4625/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/f468baea534e777a33b138d5f69f4625/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/e7e7ed874018fde516dc4dddf2883e63/transformed/foundation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/e7e7ed874018fde516dc4dddf2883e63/transformed/foundation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/9e3bd26d62d5c1d0e67faff678e19169/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/9e3bd26d62d5c1d0e67faff678e19169/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-unit-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a380ffc917509ca50d4aded464cd3407/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-unit-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a380ffc917509ca50d4aded464cd3407/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-geometry-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/33db2695b7ceaf4fb9f74ab912f9fcea/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-geometry-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/33db2695b7ceaf4fb9f74ab912f9fcea/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-util-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/c1fb92fdb126fe8a5b8fc4c957b88e3d/transformed/ui-util-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-util-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/c1fb92fdb126fe8a5b8fc4c957b88e3d/transformed/ui-util-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-text-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/8cc346ebdd99117c28d380a9a4a651da/transformed/ui-text-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-text-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/8cc346ebdd99117c28d380a9a4a651da/transformed/ui-text-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-graphics-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ffde672ece4bcf7609a74196d02c7841/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-graphics-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ffde672ece4bcf7609a74196d02c7841/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0aff3c66377cabf1c1eb16fa8552a3ad/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0aff3c66377cabf1c1eb16fa8552a3ad/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.activity:activity-compose:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/ee4d630d0fff2b9b8ee3b01844f85de1/transformed/activity-compose-1.9.1/AndroidManifest.xml:5:5-44
-MERGED from [androidx.activity:activity-compose:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/ee4d630d0fff2b9b8ee3b01844f85de1/transformed/activity-compose-1.9.1/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5e98ec758248ba037820c4b1e9e9e3b0/transformed/ui-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5e98ec758248ba037820c4b1e9e9e3b0/transformed/ui-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.autofill:autofill:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/e85618da35cb03dec05a1cae6a1b7d10/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.autofill:autofill:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/e85618da35cb03dec05a1cae6a1b7d10/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/f5c138314d6e72ee3125afe0d5a5dc75/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
-MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/f5c138314d6e72ee3125afe0d5a5dc75/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/fa1bad503b7b70f86908f10bc178cb8f/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/fa1bad503b7b70f86908f10bc178cb8f/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/e1079c03c61f893c62dba2f24a7f13c9/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/e1079c03c61f893c62dba2f24a7f13c9/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:21:5-44
-MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:21:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/fd3ca800d641fe93b83a6de7c5ab343a/transformed/lifecycle-livedata-core-2.8.4/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/fd3ca800d641fe93b83a6de7c5ab343a/transformed/lifecycle-livedata-core-2.8.4/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/c9f255c68d3a21f352c70eb07a14da8d/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/c9f255c68d3a21f352c70eb07a14da8d/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d832167b3987b27e30df28f4e2d2d42f/transformed/lifecycle-viewmodel-ktx-2.8.4/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d832167b3987b27e30df28f4e2d2d42f/transformed/lifecycle-viewmodel-ktx-2.8.4/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dce3bd7f33179cdaba04e65ac09ee838/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dce3bd7f33179cdaba04e65ac09ee838/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-service:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d1cdd2cfd762c247494b03ab8a4ab7f8/transformed/lifecycle-service-2.8.4/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-service:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d1cdd2cfd762c247494b03ab8a4ab7f8/transformed/lifecycle-service-2.8.4/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/93e642fce50d14df67fd3870dbd12cd4/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/93e642fce50d14df67fd3870dbd12cd4/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/397e95b14eb0b7f93ce3b8beff93809b/transformed/lifecycle-viewmodel-savedstate-2.8.4/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/397e95b14eb0b7f93ce3b8beff93809b/transformed/lifecycle-viewmodel-savedstate-2.8.4/AndroidManifest.xml:20:5-44
-MERGED from [androidx.core:core-ktx:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/8e084323f46282521cd8f53c2c919674/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
-MERGED from [androidx.core:core-ktx:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/8e084323f46282521cd8f53c2c919674/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
-MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
-MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
-MERGED from [androidx.room:room-ktx:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/6d952dd00ce8030ff136eb3c89c42cf8/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.room:room-ktx:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/6d952dd00ce8030ff136eb3c89c42cf8/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0989b06c877078f692b0fe452cc48782/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0989b06c877078f692b0fe452cc48782/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.runtime:runtime-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/df9aa44a074f32836a408ddb929671f8/transformed/runtime-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.runtime:runtime-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/df9aa44a074f32836a408ddb929671f8/transformed/runtime-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/e0c195bc4bd35f98a336df4c7f36e006/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/e0c195bc4bd35f98a336df4c7f36e006/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.sqlite:sqlite:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/0d29c3ebd983c7d55622260b7caf050c/transformed/sqlite-2.4.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.sqlite:sqlite:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/0d29c3ebd983c7d55622260b7caf050c/transformed/sqlite-2.4.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/930ea407cc2d6a22316554987fdc8311/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/930ea407cc2d6a22316554987fdc8311/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/hypno/.gradle/caches/9.6.1/transforms/87eab722f3f23d302e1f100d486706d3/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
-MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/hypno/.gradle/caches/9.6.1/transforms/87eab722f3f23d302e1f100d486706d3/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
-MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/hypno/.gradle/caches/9.6.1/transforms/1bb410c7ade65c5ee7fc762a94447c2f/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/hypno/.gradle/caches/9.6.1/transforms/1bb410c7ade65c5ee7fc762a94447c2f/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.interpolator:interpolator:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/23efa6c38f68bf0238894b2c16a3ed1d/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.interpolator:interpolator:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/23efa6c38f68bf0238894b2c16a3ed1d/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/cdc3f4a2d187854b6f6204c2c050048f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/cdc3f4a2d187854b6f6204c2c050048f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:21:5-44
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:21:5-44
-MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/6e89cc1f41e1a3a30df7ceed1d560750/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
-MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/6e89cc1f41e1a3a30df7ceed1d560750/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
-MERGED from [androidx.tracing:tracing:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/2d63f0a01895848ede00d2bdf18f07f5/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.tracing:tracing:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/2d63f0a01895848ede00d2bdf18f07f5/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.activity:activity:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/e0d911d77e21e77345d51bdba3443789/transformed/activity-1.9.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/e0d911d77e21e77345d51bdba3443789/transformed/activity-1.9.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/a91ae8c90eb7069e6f2d787c156ac908/transformed/activity-ktx-1.9.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/a91ae8c90eb7069e6f2d787c156ac908/transformed/activity-ktx-1.9.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material3:material3-android:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/9825bcca01075d244eaf88bdf0f08728/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/9825bcca01075d244eaf88bdf0f08728/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/364e2bfcc071b6fc15f0765ffe6508fe/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/364e2bfcc071b6fc15f0765ffe6508fe/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/275a9e49f13727d63ad36068c9be0a76/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/275a9e49f13727d63ad36068c9be0a76/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a0edca69763a8db3c2e140be444c6019/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/a0edca69763a8db3c2e140be444c6019/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5fad4944c56fa208359076d49a061d5d/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5fad4944c56fa208359076d49a061d5d/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/603b488825b3208f5c9597183978b7d0/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/603b488825b3208f5c9597183978b7d0/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/54daebab3f98c97f1fe18623e0789ced/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/54daebab3f98c97f1fe18623e0789ced/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/922ba271c3c048062420b4ca15a9b655/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/922ba271c3c048062420b4ca15a9b655/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/acb7e96e5da55a45c424104fb84ace43/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/acb7e96e5da55a45c424104fb84ace43/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0a5c5d1a2ae708f63035818214b90fbe/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/0a5c5d1a2ae708f63035818214b90fbe/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5e90c0a2def098676ec9e49be80eca17/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/5e90c0a2def098676ec9e49be80eca17/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/8298c2be305d3c47e9b7c1cd602d7699/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/8298c2be305d3c47e9b7c1cd602d7699/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/c0de432631f87347ccdc1705db2f24ed/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/c0de432631f87347ccdc1705db2f24ed/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/dce9433ef34227f8f2b30f951ff0f323/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/dce9433ef34227f8f2b30f951ff0f323/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/cdb80135651c8c0fdc04d9f8e6eeea17/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/cdb80135651c8c0fdc04d9f8e6eeea17/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-compose:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/dc0e08bd4242c9e0268543206f67fab1/transformed/activity-compose-1.9.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.9.1] /home/hypno/.gradle/caches/9.6.1/transforms/dc0e08bd4242c9e0268543206f67fab1/transformed/activity-compose-1.9.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/b90f42d78dafcaf5823a840a1cc0cdb0/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/b90f42d78dafcaf5823a840a1cc0cdb0/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/479733f76e4873cee727002b815b548e/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/479733f76e4873cee727002b815b548e/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/dad1f320ff9e6ebc2dc4700ebaf79aa6/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/dad1f320ff9e6ebc2dc4700ebaf79aa6/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/b2de3d7ca1874517c9cdeffe134c4a6d/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/b2de3d7ca1874517c9cdeffe134c4a6d/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/6acf9bb50f23484fa73e0d689bad8a63/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/hypno/.gradle/caches/9.6.1/transforms/6acf9bb50f23484fa73e0d689bad8a63/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/9a02970c2cce6e0e14cca85ef23d9a29/transformed/lifecycle-livedata-core-2.8.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/9a02970c2cce6e0e14cca85ef23d9a29/transformed/lifecycle-livedata-core-2.8.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/03f753ab47ba645de9c66a7e7ae128af/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/03f753ab47ba645de9c66a7e7ae128af/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/9d3590553b35031da1d8c37e59fc23d8/transformed/lifecycle-viewmodel-ktx-2.8.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/9d3590553b35031da1d8c37e59fc23d8/transformed/lifecycle-viewmodel-ktx-2.8.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d440d0bf7158ab4bd3a5322988a5a5ab/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/d440d0bf7158ab4bd3a5322988a5a5ab/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-service:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/5ef8130d3d9a4cad9727a50ff44b03fc/transformed/lifecycle-service-2.8.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-service:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/5ef8130d3d9a4cad9727a50ff44b03fc/transformed/lifecycle-service-2.8.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/661190aeba0610f36fd8afb5465631be/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/661190aeba0610f36fd8afb5465631be/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/bb962a01b7e14227a6038b9663a0fe89/transformed/lifecycle-viewmodel-savedstate-2.8.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/bb962a01b7e14227a6038b9663a0fe89/transformed/lifecycle-viewmodel-savedstate-2.8.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f9c150c5ab3c3f11654a6e28a46a6a0/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f9c150c5ab3c3f11654a6e28a46a6a0/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-ktx:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/c653ab194e6890b9be8f1f0ed16f820f/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.room:room-ktx:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/c653ab194e6890b9be8f1f0ed16f820f/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/e9f6b075600753157c63cb215b96e927/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/e9f6b075600753157c63cb215b96e927/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/9da258fa6283618a9678b8271cecb128/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/9da258fa6283618a9678b8271cecb128/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/00052a3f4650e481b28cee5a41ba79a4/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/00052a3f4650e481b28cee5a41ba79a4/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/1f1c46379c46554e1695e4c0a812818b/transformed/sqlite-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite:2.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/1f1c46379c46554e1695e4c0a812818b/transformed/sqlite-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/d0d0d231fc82e742c175ba27feffd579/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/hypno/.gradle/caches/9.6.1/transforms/d0d0d231fc82e742c175ba27feffd579/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/hypno/.gradle/caches/9.6.1/transforms/1da853eb42f10d5fa10dc06c99f4d6de/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/hypno/.gradle/caches/9.6.1/transforms/1da853eb42f10d5fa10dc06c99f4d6de/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/hypno/.gradle/caches/9.6.1/transforms/831b6a67f6bdde7946d70b3fa33959af/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/hypno/.gradle/caches/9.6.1/transforms/831b6a67f6bdde7946d70b3fa33959af/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/1d05a6def726ee988c1b5741af54f24f/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/1d05a6def726ee988c1b5741af54f24f/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/802a78466e11ec3b47c6b656152dd4be/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/802a78466e11ec3b47c6b656152dd4be/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/e2ab0cad7f158d3343c27c3e21a1bd75/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/e2ab0cad7f158d3343c27c3e21a1bd75/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/3b7e0603e8784339cf0a4dabffd50197/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.0.0] /home/hypno/.gradle/caches/9.6.1/transforms/3b7e0603e8784339cf0a4dabffd50197/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
 	android:targetSdkVersion
 		INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml
 	android:minSdkVersion
 		INJECTED from /home/hypno/Antigravity/HomeAssistHUB/hub/app/src/main/AndroidManifest.xml
 activity#androidx.compose.ui.tooling.PreviewActivity
-ADDED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+ADDED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
 	android:exported
-		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
 	android:name
-		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/1a9441b122a42a5bb9486713d80fd07a/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.8] /home/hypno/.gradle/caches/9.6.1/transforms/ea5d9ed0685aea993350ed782f09322b/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
 provider#androidx.startup.InitializationProvider
-ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:24:9-32:20
-MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/6e89cc1f41e1a3a30df7ceed1d560750/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
-MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/6e89cc1f41e1a3a30df7ceed1d560750/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/e2ab0cad7f158d3343c27c3e21a1bd75/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/hypno/.gradle/caches/9.6.1/transforms/e2ab0cad7f158d3343c27c3e21a1bd75/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
 	tools:node
-		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:28:13-31
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:28:13-31
 	android:authorities
-		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
 	android:exported
-		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
 	android:name
-		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
 meta-data#androidx.emoji2.text.EmojiCompatInitializer
-ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
 	android:value
-		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
 	android:name
-		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/b2b896786358bb7864d5d30ed46a7e1d/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/hypno/.gradle/caches/9.6.1/transforms/2f7c8ff8422255eb57b3e06a34b70c9f/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
 permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
-		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
 	android:name
-		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
 permission#com.homeassisthub.hub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
-		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
 	android:name
-		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
 uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
 	android:name
-		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
 uses-permission#com.homeassisthub.hub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
-ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
 	android:name
-		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3f3b5ca772fb26e0761668a1d1a3cae9/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+		ADDED from [androidx.core:core:1.13.1] /home/hypno/.gradle/caches/9.6.1/transforms/3cb3cb5f7bf7110a8d2e0da4a2364a3d/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
 meta-data#androidx.lifecycle.ProcessLifecycleInitializer
-ADDED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:29:13-31:52
+ADDED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:29:13-31:52
 	android:value
-		ADDED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:31:17-49
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:31:17-49
 	android:name
-		ADDED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/8219743b88b859c5d691903b79b8cf1c/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:30:17-78
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.4] /home/hypno/.gradle/caches/9.6.1/transforms/dfa50e95ed220d58b00b29811b0490da/transformed/lifecycle-process-2.8.4/AndroidManifest.xml:30:17-78
 service#androidx.room.MultiInstanceInvalidationService
-ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
+ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
 	android:exported
-		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
 	tools:ignore
-		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:28:13-60
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:28:13-60
 	android:directBootAware
-		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
 	android:name
-		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/f6326afe885d88e4252a402fad983eb4/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/hypno/.gradle/caches/9.6.1/transforms/9889a00ab7f374e0ddcb147e76034b58/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
 meta-data#androidx.profileinstaller.ProfileInstallerInitializer
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
 	android:value
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
 receiver#androidx.profileinstaller.ProfileInstallReceiver
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
 	android:enabled
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
 	android:exported
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
 	android:permission
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
 	android:directBootAware
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
 intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
 action#androidx.profileinstaller.action.INSTALL_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
 intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
 action#androidx.profileinstaller.action.SKIP_FILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
 intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
 action#androidx.profileinstaller.action.SAVE_PROFILE
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
 intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
 action#androidx.profileinstaller.action.BENCHMARK_OPERATION
-ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
 	android:name
-		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/aa9f38d2eff5fea8b0b679054d9cd26e/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/hypno/.gradle/caches/9.6.1/transforms/5783c1058ce2a03558c5919398b4a416/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
