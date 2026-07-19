@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HomeAssist Client</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_settings">Beállítások</string>
+    <string name="dashboard_title">Otthon irányítópult</string>
+    <string name="dashboard_power_chart_title">Fogyasztás (P1)</string>
+    <string name="dashboard_no_plugs">Nincs konfigurált konnektor. Add hozzá a Beállításokban.</string>
+    <string name="plug_turn_on">Be</string>
+    <string name="plug_turn_off">Ki</string>
+    <string name="settings_title">Eszközök és beállítások</string>
+    <string name="settings_relay_url">Relé URL</string>
+    <string name="settings_home_id">Otthon azonosító (homeId)</string>
+    <string name="settings_hub_local_url">Hub helyi API URL (pl. http://192.168.1.50:8080)</string>
+    <string name="settings_save">Mentés</string>
+    <string name="settings_discover">Eszközök keresése</string>
+    <string name="settings_discovered_devices">Talált eszközök</string>
+    <string name="settings_saved_devices">Mentett eszközök</string>
+    <string name="settings_add_credential">Hitelesítő adatok megadása</string>
+    <string name="settings_device_id">Eszköz azonosító</string>
+    <string name="settings_device_type">Eszköz típusa</string>
+    <string name="settings_username">Felhasználónév</string>
+    <string name="settings_password">Jelszó</string>
+    <string name="settings_save_credential">Mentés a Hubra</string>
+</resources>
