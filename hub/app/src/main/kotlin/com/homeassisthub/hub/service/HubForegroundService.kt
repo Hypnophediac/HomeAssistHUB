@@ -12,6 +12,13 @@ import androidx.core.app.NotificationCompat
 import com.homeassisthub.hub.HubApplication
 import com.homeassisthub.hub.MainActivity
 import com.homeassisthub.hub.R
+import com.homeassisthub.hub.bridge.CommandRouter
+import com.homeassisthub.hub.bridge.HubSocketClient
+import com.homeassisthub.hub.controller.DeviceControllerFactory
+import com.homeassisthub.hub.controller.P1MeterController
+import com.homeassisthub.hub.data.HubConfigStore
+import com.homeassisthub.hub.data.db.AppDatabase
+import com.homeassisthub.hub.security.SecureCredentialStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,6 +38,15 @@ class HubForegroundService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var wakeLock: PowerManager.WakeLock? = null
 
+    private val credentialStore by lazy { SecureCredentialStore(applicationContext) }
+    private val hubConfigStore by lazy { HubConfigStore(applicationContext) }
+    private val p1Dao by lazy { AppDatabase.getInstance(applicationContext).p1Dao() }
+    private val controllerFactory by lazy { DeviceControllerFactory(p1Dao, serviceScope) }
+    private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory) }
+
+    private var hubSocketClient: HubSocketClient? = null
+    private val p1Pollers = mutableListOf<P1MeterController>()
+
     override fun onCreate() {
         super.onCreate()
         acquireWakeLock()
@@ -42,7 +58,11 @@ class HubForegroundService : Service() {
                 stopSelf()
                 return START_NOT_STICKY
             }
-            else -> startForeground(NOTIFICATION_ID, buildNotification())
+            else -> {
+                startForeground(NOTIFICATION_ID, buildNotification())
+                startP1MeterPollers()
+                connectToRelay()
+            }
         }
         return START_STICKY
     }
@@ -50,9 +70,36 @@ class HubForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        hubSocketClient?.disconnect()
+        p1Pollers.forEach { it.stopPolling() }
+        p1Pollers.clear()
         releaseWakeLock()
         serviceScope.cancel()
         super.onDestroy()
+    }
+
+    /** Starts a periodic (60s) poller for every stored P1 meter credential. */
+    private fun startP1MeterPollers() {
+        if (p1Pollers.isNotEmpty()) return // already started
+        credentialStore.getAllCredentials()
+            .filter { it.deviceType == DeviceControllerFactory.DEVICE_TYPE_P1_METER }
+            .forEach { credential ->
+                val controller = controllerFactory.create(credential) as? P1MeterController ?: return@forEach
+                controller.startPolling()
+                p1Pollers.add(controller)
+            }
+    }
+
+    /** Connects the Socket.IO client to the cloud relay, if configured. */
+    private fun connectToRelay() {
+        if (hubSocketClient != null) return // already connected
+        val config = hubConfigStore.getConfig() ?: return
+        hubSocketClient = HubSocketClient(
+            relayUrl = config.relayUrl,
+            homeId = config.homeId,
+            commandRouter = commandRouter,
+            scope = serviceScope
+        ).also { it.connect() }
     }
 
     private fun acquireWakeLock() {

@@ -74,6 +74,11 @@ dependencies {
     implementation("com.squareup.moshi:moshi:1.15.1")
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
 
+    // Cloud relay bridge (Socket.IO client to the Koyeb/Render relay)
+    implementation("io.socket:socket.io-client:2.1.1") {
+        exclude(group = "org.json", module = "json")
+    }
+
     // EncryptedSharedPreferences (device credential storage)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
