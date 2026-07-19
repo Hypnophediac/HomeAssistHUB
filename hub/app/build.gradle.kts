@@ -69,6 +69,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    // Networking (local device controllers: P1 meter, smart plug, V380 ONVIF)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.moshi:moshi:1.15.1")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
+
     // EncryptedSharedPreferences (device credential storage)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
