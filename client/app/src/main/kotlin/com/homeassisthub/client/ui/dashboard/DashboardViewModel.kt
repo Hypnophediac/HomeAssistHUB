@@ -3,8 +3,9 @@ package com.homeassisthub.client.ui.dashboard
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeassisthub.client.data.ClientConfig
 import com.homeassisthub.client.data.ClientConfigStore
-import com.homeassisthub.client.network.RetrofitFactory
+import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
 import com.homeassisthub.client.network.model.P1ReadingDto
@@ -30,17 +31,30 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
+    /**
+     * Refreshes plug list + P1 history through the cloud relay
+     * (`command_request`/`command_response`), so this works from anywhere
+     * (mobile data), not just when the Client is on the Hub's local LAN.
+     */
     fun refresh() {
         viewModelScope.launch {
             val config = configStore.getConfig()
             if (config == null) {
-                _statusMessage.value = "Nincs beállítva a Hub kapcsolat (lásd Beállítások)."
+                _statusMessage.value = "Nincs beállítva a relé kapcsolat (lásd Beállítások)."
                 return@launch
             }
+            val manager = ensureSocketConnected(config)
             runCatching {
-                val api = RetrofitFactory.create(config.hubLocalBaseUrl)
-                _plugs.value = api.getDevices().filter { it.deviceType == "smart_plug" }
-                _p1History.value = api.getP1History(100)
+                val devicesResponse = manager.sendCommand("hub", "list_devices")
+                if (!devicesResponse.optBoolean("success")) error(devicesResponse.optString("error", "Unknown error"))
+                val devicesJson = devicesResponse.optJSONObject("data")?.optJSONArray("devices")
+                _plugs.value = JsonParsing.parseList(devicesJson, DeviceCredentialSummaryDto::class.java)
+                    .filter { it.deviceType == "smart_plug" }
+
+                val historyResponse = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to "100"))
+                if (!historyResponse.optBoolean("success")) error(historyResponse.optString("error", "Unknown error"))
+                val readingsJson = historyResponse.optJSONObject("data")?.optJSONArray("readings")
+                _p1History.value = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
             }.onFailure {
                 _statusMessage.value = "Hiba a Hub elérésekor: ${it.message}"
             }
@@ -60,7 +74,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun ensureSocketConnected(config: com.homeassisthub.client.data.ClientConfig): SocketIoManager {
+    private fun ensureSocketConnected(config: ClientConfig): SocketIoManager {
         return socketManager ?: SocketIoManager(config.relayUrl, config.homeId).also {
             it.connect()
             socketManager = it

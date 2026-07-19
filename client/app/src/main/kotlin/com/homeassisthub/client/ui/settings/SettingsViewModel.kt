@@ -6,8 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeassisthub.client.data.ClientConfig
 import com.homeassisthub.client.data.ClientConfigStore
-import com.homeassisthub.client.network.RetrofitFactory
-import com.homeassisthub.client.network.model.DeviceCredentialRequestDto
+import com.homeassisthub.client.network.JsonParsing
+import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
 import com.homeassisthub.client.network.model.DiscoveredDeviceDto
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,28 +32,43 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
+    private var socketManager: SocketIoManager? = null
+
     init {
-        if (config.value.hubLocalBaseUrl.isNotBlank()) loadSavedDevices()
+        if (config.value.relayUrl.isNotBlank() && config.value.homeId.isNotBlank()) loadSavedDevices()
     }
 
     fun saveConfig(relayUrl: String, homeId: String, hubLocalBaseUrl: String) {
         val newConfig = ClientConfig(relayUrl, homeId, hubLocalBaseUrl)
         configStore.saveConfig(newConfig)
         config.value = newConfig
+        socketManager?.disconnect()
+        socketManager = null
         _statusMessage.value = "Beállítások elmentve."
         loadSavedDevices()
+    }
+
+    /** All Hub interactions go through the relay ("hub" pseudo-device commands), so this works over mobile data too. */
+    private fun ensureSocketConnected(cfg: ClientConfig): SocketIoManager {
+        return socketManager ?: SocketIoManager(cfg.relayUrl, cfg.homeId).also {
+            it.connect()
+            socketManager = it
+        }
     }
 
     fun discoverDevices() {
         viewModelScope.launch {
             val cfg = config.value
-            if (cfg.hubLocalBaseUrl.isBlank()) {
-                _statusMessage.value = "Előbb add meg a Hub helyi API URL-jét."
+            if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) {
+                _statusMessage.value = "Előbb add meg a relé URL-t és a homeId-t."
                 return@launch
             }
+            val manager = ensureSocketConnected(cfg)
             runCatching {
-                val api = RetrofitFactory.create(cfg.hubLocalBaseUrl)
-                _discovered.value = api.discoverDevices()
+                val response = manager.sendCommand("hub", "discover_devices")
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
+                val devicesJson = response.optJSONObject("data")?.optJSONArray("devices")
+                _discovered.value = JsonParsing.parseList(devicesJson, DiscoveredDeviceDto::class.java)
             }.onFailure { _statusMessage.value = "Discovery hiba: ${it.message}" }
         }
     }
@@ -61,10 +76,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun loadSavedDevices() {
         viewModelScope.launch {
             val cfg = config.value
-            if (cfg.hubLocalBaseUrl.isBlank()) return@launch
+            if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) return@launch
+            val manager = ensureSocketConnected(cfg)
             runCatching {
-                val api = RetrofitFactory.create(cfg.hubLocalBaseUrl)
-                _savedDevices.value = api.getDevices()
+                val response = manager.sendCommand("hub", "list_devices")
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
+                val devicesJson = response.optJSONObject("data")?.optJSONArray("devices")
+                _savedDevices.value = JsonParsing.parseList(devicesJson, DeviceCredentialSummaryDto::class.java)
             }.onFailure { _statusMessage.value = "Hiba a mentett eszközök lekérésekor: ${it.message}" }
         }
     }
@@ -72,13 +90,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun saveCredential(deviceId: String, deviceType: String, ipAddress: String, port: Int, username: String, password: String) {
         viewModelScope.launch {
             val cfg = config.value
-            if (cfg.hubLocalBaseUrl.isBlank()) {
-                _statusMessage.value = "Előbb add meg a Hub helyi API URL-jét."
+            if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) {
+                _statusMessage.value = "Előbb add meg a relé URL-t és a homeId-t."
                 return@launch
             }
+            val manager = ensureSocketConnected(cfg)
             runCatching {
-                val api = RetrofitFactory.create(cfg.hubLocalBaseUrl)
-                api.saveDevice(DeviceCredentialRequestDto(deviceId, deviceType, ipAddress, port, username, password))
+                val params = mapOf(
+                    "deviceId" to deviceId,
+                    "deviceType" to deviceType,
+                    "ipAddress" to ipAddress,
+                    "port" to port.toString(),
+                    "username" to username,
+                    "password" to password
+                )
+                val response = manager.sendCommand("hub", "save_credential", params)
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
                 _statusMessage.value = "Eszköz elmentve: $deviceId"
                 loadSavedDevices()
             }.onFailure { _statusMessage.value = "Mentési hiba: ${it.message}" }
@@ -88,12 +115,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun deleteCredential(deviceId: String) {
         viewModelScope.launch {
             val cfg = config.value
+            val manager = ensureSocketConnected(cfg)
             runCatching {
-                val api = RetrofitFactory.create(cfg.hubLocalBaseUrl)
-                api.deleteDevice(deviceId)
+                val response = manager.sendCommand("hub", "delete_credential", mapOf("deviceId" to deviceId))
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
                 loadSavedDevices()
             }.onFailure { _statusMessage.value = "Törlési hiba: ${it.message}" }
         }
+    }
+
+    override fun onCleared() {
+        socketManager?.disconnect()
+        super.onCleared()
     }
 
     fun clearStatusMessage() {

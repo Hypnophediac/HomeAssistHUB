@@ -39,12 +39,18 @@ export function registerSocketHandlers(io: Server, socket: Socket<any, any, any,
   // Client -> Hub
   socket.on("command_request", (payload: CommandRequestPayload) => {
     if (!requireRoom(socket, payload?.homeId)) return;
+    console.log(
+      `[command_request] home=${payload.homeId} requestId=${payload.requestId} deviceId=${payload.deviceId} action=${payload.action}`
+    );
     socket.to(payload.homeId).emit("command_request", payload);
   });
 
   // Hub -> Client
   socket.on("command_response", (payload: CommandResponsePayload) => {
     if (!requireRoom(socket, payload?.homeId)) return;
+    console.log(
+      `[command_response] home=${payload.homeId} requestId=${payload.requestId} success=${payload.success} error=${payload.error ?? ""}`
+    );
     socket.to(payload.homeId).emit("command_response", payload);
   });
 

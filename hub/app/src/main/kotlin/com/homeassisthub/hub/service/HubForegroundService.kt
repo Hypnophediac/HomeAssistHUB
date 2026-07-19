@@ -44,8 +44,8 @@ class HubForegroundService : Service() {
     private val hubConfigStore by lazy { HubConfigStore(applicationContext) }
     private val p1Dao by lazy { AppDatabase.getInstance(applicationContext).p1Dao() }
     private val controllerFactory by lazy { DeviceControllerFactory(p1Dao, serviceScope) }
-    private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory) }
     private val discoveryManager by lazy { DiscoveryManager(applicationContext) }
+    private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory, discoveryManager, p1Dao) }
     private val apiServer by lazy { HubApiServer(discoveryManager, credentialStore, p1Dao) }
 
     private var hubSocketClient: HubSocketClient? = null
