@@ -34,4 +34,28 @@ io.on("connection", (socket) => {
 
 httpServer.listen(PORT, () => {
   console.log(`smarthome-relay listening on port ${PORT}`);
+  startKeepAlivePing();
 });
+
+/**
+ * Render's free tier spins down web services after ~15 minutes without
+ * an inbound HTTP request. Pinging our own public /health endpoint every
+ * 10 minutes counts as genuine inbound traffic and keeps the instance awake.
+ * Set KEEP_ALIVE_URL explicitly if RENDER_EXTERNAL_URL isn't available
+ * (e.g. when deploying elsewhere); set KEEP_ALIVE_DISABLED=1 to turn this off.
+ */
+function startKeepAlivePing(): void {
+  if (process.env.KEEP_ALIVE_DISABLED === "1") return;
+
+  const baseUrl = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  const healthUrl = `${baseUrl.replace(/\/$/, "")}/health`;
+  const intervalMs = 10 * 60 * 1000; // 10 minutes
+
+  setInterval(() => {
+    fetch(healthUrl)
+      .then((res) => console.log(`[keep-alive] ping ${healthUrl} -> ${res.status}`))
+      .catch((err) => console.error(`[keep-alive] ping failed: ${err.message}`));
+  }, intervalMs);
+
+  console.log(`[keep-alive] pinging ${healthUrl} every ${intervalMs / 60000} minutes`);
+}
