@@ -3,6 +3,7 @@ import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { registerSocketHandlers } from "./socketHandlers";
+import fusionSolarRoutes from "./fusionSolarRoutes";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -17,6 +18,9 @@ app.get("/", (_req, res) => {
 app.get("/health", (_req, res) => {
   res.json({ status: "healthy", uptime: process.uptime() });
 });
+
+// FusionSolar inverter API routes
+app.use("/api/fusionsolar", fusionSolarRoutes);
 
 const httpServer = createServer(app);
 

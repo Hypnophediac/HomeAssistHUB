@@ -80,6 +80,11 @@ export function registerSocketHandlers(io: Server, socket: Socket<any, any, any,
       });
     }
   });
+
+  // Keepalive ping to prevent Render free tier spin-down
+  socket.on("keepalive", (payload: { homeId?: string; timestamp?: number }) => {
+    console.log(`[keepalive] socket=${socket.id} home=${payload?.homeId} ts=${payload?.timestamp}`);
+  });
 }
 
 function requireRoom(socket: Socket<any, any, any, SocketData>, homeId?: string): boolean {
