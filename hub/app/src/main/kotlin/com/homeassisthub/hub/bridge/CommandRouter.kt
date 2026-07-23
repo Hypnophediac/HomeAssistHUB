@@ -22,7 +22,9 @@ class CommandRouter(
     private val p1Dao: P1Dao,
     private val p1RawDao: P1RawDao? = null,
     private val p1DailySummaryDao: P1DailySummaryDao? = null,
-    private val inverterHistoryDao: InverterHistoryDao? = null
+    private val inverterHistoryDao: InverterHistoryDao? = null,
+    private val hubConfigStore: com.homeassisthub.hub.data.HubConfigStore? = null,
+    private val kioskScraper: com.homeassisthub.hub.controller.HuaweiCloudScraper? = null
 ) {
 
     private val controllerCache = ConcurrentHashMap<String, DeviceController>()
@@ -60,6 +62,23 @@ class CommandRouter(
         "list_devices" -> CommandResult.Success(
             mapOf("devices" to credentialStore.getAllCredentials().map { it.toSummaryMap() })
         )
+        "save_kiosk_url" -> {
+            val kioskUrl = params["kioskUrl"] ?: error("Missing kioskUrl")
+            val store = hubConfigStore ?: error("Hub config store not available")
+            val config = store.getConfig()
+                ?: com.homeassisthub.hub.data.HubConfig("", "", kioskUrl)
+            store.saveConfig(config.copy(kioskUrl = kioskUrl))
+            Log.i("CommandRouter", "Kiosk URL saved, restarting scraper")
+            kioskScraper?.stopPolling()
+            if (kioskUrl.isNotBlank()) {
+                kioskScraper?.startPolling(kioskUrl)
+            }
+            CommandResult.Success(mapOf("saved" to kioskUrl))
+        }
+        "get_kiosk_url" -> {
+            val config = hubConfigStore?.getConfig()
+            CommandResult.Success(mapOf("kioskUrl" to (config?.kioskUrl ?: "")))
+        }
         "discover_devices" -> {
             val timeoutMs = params["timeoutMs"]?.toLongOrNull() ?: 3000L
             val devices = discoveryManager.discoverAll(timeoutMs)

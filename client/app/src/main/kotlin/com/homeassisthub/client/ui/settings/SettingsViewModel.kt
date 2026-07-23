@@ -147,6 +147,39 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun saveKioskUrl(kioskUrl: String) {
+        viewModelScope.launch {
+            val cfg = config.value
+            if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) {
+                _statusMessage.value = "Előbb add meg a relé URL-t és a homeId-t."
+                return@launch
+            }
+            val manager = ensureSocketConnected(cfg)
+            runCatching {
+                val response = retryCommand(manager, "hub", "save_kiosk_url", mapOf("kioskUrl" to kioskUrl))
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
+                _statusMessage.value = "Kiosk URL elmentve. A scraper 5 percenként frissíti az adatokat."
+            }.onFailure { _statusMessage.value = "Kiosk mentési hiba: ${it.message}" }
+        }
+    }
+
+    fun loadKioskUrl() {
+        viewModelScope.launch {
+            val cfg = config.value
+            if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) {
+                _statusMessage.value = "Előbb add meg a relé URL-t és a homeId-t."
+                return@launch
+            }
+            val manager = ensureSocketConnected(cfg)
+            runCatching {
+                val response = retryCommand(manager, "hub", "get_kiosk_url")
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
+                val url = response.optJSONObject("data")?.optString("kioskUrl") ?: ""
+                _statusMessage.value = if (url.isNotBlank()) "Kiosk URL: $url" else "Nincs Kiosk URL beállítva."
+            }.onFailure { _statusMessage.value = "Kiosk lekérdezési hiba: ${it.message}" }
+        }
+    }
+
     override fun onCleared() {
         socketManager?.disconnect()
         super.onCleared()

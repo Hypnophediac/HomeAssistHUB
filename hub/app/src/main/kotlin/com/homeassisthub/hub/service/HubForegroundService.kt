@@ -17,7 +17,9 @@ import com.homeassisthub.hub.api.HubApiServer
 import com.homeassisthub.hub.bridge.CommandRouter
 import com.homeassisthub.hub.bridge.HubSocketClient
 import com.homeassisthub.hub.controller.DeviceControllerFactory
+import com.homeassisthub.hub.controller.HuaweiCloudScraper
 import com.homeassisthub.hub.controller.HuaweiInverterController
+import com.homeassisthub.hub.controller.InverterHistoryDaoHolder
 import com.homeassisthub.hub.controller.P1MeterController
 import com.homeassisthub.hub.data.HubConfigStore
 import com.homeassisthub.hub.data.db.AppDatabase
@@ -58,7 +60,8 @@ class HubForegroundService : Service() {
     private val inverterHistoryDao by lazy { database.inverterHistoryDao() }
     private val controllerFactory by lazy { DeviceControllerFactory(p1Dao, p1RawDao, serviceScope, applicationContext) }
     private val discoveryManager by lazy { DiscoveryManager(applicationContext) }
-    private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory, discoveryManager, p1Dao, p1RawDao, p1DailySummaryDao, inverterHistoryDao) }
+    private val kioskScraper by lazy { HuaweiCloudScraper(serviceScope) }
+    private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory, discoveryManager, p1Dao, p1RawDao, p1DailySummaryDao, inverterHistoryDao, hubConfigStore, kioskScraper) }
     private val apiServer by lazy { HubApiServer(discoveryManager, credentialStore, p1Dao, p1RawDao, p1DailySummaryDao) }
 
     private var hubSocketClient: HubSocketClient? = null
@@ -82,6 +85,7 @@ class HubForegroundService : Service() {
                 apiServer.start()
                 startP1MeterPollers()
                 startInverterPollers()
+                startKioskScraper()
                 startDailySummaryWorker()
                 connectToRelay()
             }
@@ -98,6 +102,7 @@ class HubForegroundService : Service() {
         p1Pollers.clear()
         inverterPollers.forEach { it.stopPolling() }
         inverterPollers.clear()
+        kioskScraper.stopPolling()
         mockP1Job?.cancel()
         mockP1Job = null
         releaseWakeLock()
@@ -117,6 +122,18 @@ class HubForegroundService : Service() {
             val controller = controllerFactory.create(credential) as? HuaweiInverterController ?: return@forEach
             controller.startPolling()
             inverterPollers.add(controller)
+        }
+    }
+
+    /** Starts the FusionSolar Kiosk scraper if a kiosk URL is configured. */
+    private fun startKioskScraper() {
+        InverterHistoryDaoHolder.dao = inverterHistoryDao
+        val kioskUrl = hubConfigStore.getConfig()?.kioskUrl
+        if (!kioskUrl.isNullOrBlank()) {
+            Log.i(TAG, "Starting Kiosk scraper with configured URL")
+            kioskScraper.startPolling(kioskUrl)
+        } else {
+            Log.i(TAG, "No kiosk URL configured, scraper not started")
         }
     }
 

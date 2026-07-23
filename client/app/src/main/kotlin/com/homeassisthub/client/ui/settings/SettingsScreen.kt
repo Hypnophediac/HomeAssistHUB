@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Radar
+import androidx.compose.material.icons.filled.SolarPower
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
@@ -60,6 +61,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     var relayUrl by remember { mutableStateOf(config.relayUrl) }
     var homeId by remember { mutableStateOf(config.homeId) }
     var hubLocalBaseUrl by remember { mutableStateOf(config.hubLocalBaseUrl) }
+    var kioskUrl by remember { mutableStateOf("") }
 
     var deviceId by remember { mutableStateOf("") }
     var deviceType by remember { mutableStateOf("smart_plug") }
@@ -152,6 +154,15 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
             SavedDevicesCard(
                 savedDevices = savedDevices,
                 onDelete = { viewModel.deleteCredential(it) }
+            )
+        }
+
+        item {
+            KioskUrlCard(
+                kioskUrl = kioskUrl,
+                onKioskUrlChange = { kioskUrl = it },
+                onSave = { viewModel.saveKioskUrl(kioskUrl) },
+                onLoad = { viewModel.loadKioskUrl() }
             )
         }
 
@@ -490,6 +501,55 @@ private fun SavedDevicesCard(
                             Text(text = "Törlés")
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KioskUrlCard(
+    kioskUrl: String,
+    onKioskUrlChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onLoad: () -> Unit
+) {
+    SectionCard(icon = Icons.Filled.SolarPower, title = "Huawei FusionSolar Kiosk") {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Illeszd be a FusionSolar Kiosk URL-t. A Hub regex-szel kinyeri a kk tokent és a szerver domaint.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = kioskUrl,
+                onValueChange = onKioskUrlChange,
+                label = { Text("Kiosk URL") },
+                placeholder = { Text("https://uni002eu5.fusionsolar.huawei.com/...?kk=...") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Save,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Mentés")
+                }
+                OutlinedButton(
+                    onClick = onLoad,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Betöltés")
                 }
             }
         }
