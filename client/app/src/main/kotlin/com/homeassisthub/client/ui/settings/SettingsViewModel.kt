@@ -10,10 +10,12 @@ import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
 import com.homeassisthub.client.network.model.DiscoveredDeviceDto
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -56,6 +58,27 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** Retries a command up to 3 times with 3s delay, in case the Hub isn't connected to the relay yet. */
+    private suspend fun retryCommand(
+        manager: SocketIoManager,
+        deviceId: String,
+        action: String,
+        params: Map<String, String> = emptyMap()
+    ): JSONObject {
+        var lastResponse: JSONObject = JSONObject().put("success", false).put("error", "No attempts made")
+        for (attempt in 1..3) {
+            lastResponse = manager.sendCommand(deviceId, action, params)
+            if (lastResponse.optBoolean("success")) return lastResponse
+            val errorMsg = lastResponse.optString("error", "")
+            if (errorMsg.contains("Timeout") && attempt < 3) {
+                delay(3_000L)
+            } else {
+                return lastResponse
+            }
+        }
+        return lastResponse
+    }
+
     fun discoverDevices() {
         viewModelScope.launch {
             val cfg = config.value
@@ -65,7 +88,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             }
             val manager = ensureSocketConnected(cfg)
             runCatching {
-                val response = manager.sendCommand("hub", "discover_devices")
+                val response = retryCommand(manager, "hub", "discover_devices")
                 if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
                 val devicesJson = response.optJSONObject("data")?.optJSONArray("devices")
                 _discovered.value = JsonParsing.parseList(devicesJson, DiscoveredDeviceDto::class.java)
@@ -79,7 +102,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) return@launch
             val manager = ensureSocketConnected(cfg)
             runCatching {
-                val response = manager.sendCommand("hub", "list_devices")
+                val response = retryCommand(manager, "hub", "list_devices")
                 if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
                 val devicesJson = response.optJSONObject("data")?.optJSONArray("devices")
                 _savedDevices.value = JsonParsing.parseList(devicesJson, DeviceCredentialSummaryDto::class.java)

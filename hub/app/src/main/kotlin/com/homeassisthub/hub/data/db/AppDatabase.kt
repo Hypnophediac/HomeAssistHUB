@@ -5,10 +5,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [P1DataEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [P1DataEntity::class, P1RawData::class, P1DailySummary::class, InverterHistoryEntity::class],
+    version = 6,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun p1Dao(): P1Dao
+    abstract fun p1RawDao(): P1RawDao
+    abstract fun p1DailySummaryDao(): P1DailySummaryDao
+    abstract fun inverterHistoryDao(): InverterHistoryDao
 
     companion object {
         @Volatile
@@ -20,7 +27,8 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "homeassist_hub.db"
-                ).build().also { INSTANCE = it }
+                ).fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
         }
     }

@@ -2,6 +2,8 @@ package com.homeassisthub.hub.controller
 
 import com.homeassisthub.hub.data.db.P1DataEntity
 import com.homeassisthub.hub.data.db.P1Dao
+import com.homeassisthub.hub.data.db.P1RawData
+import com.homeassisthub.hub.data.db.P1RawDao
 import com.homeassisthub.hub.data.network.P1MeterResponse
 import com.homeassisthub.hub.security.DeviceCredential
 import com.squareup.moshi.Moshi
@@ -11,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -25,6 +28,7 @@ class P1MeterController(
     private val httpClient: OkHttpClient,
     moshi: Moshi,
     private val scope: CoroutineScope,
+    private val p1RawDao: P1RawDao? = null,
     private val pollIntervalMs: Long = 60_000L
 ) : DeviceController {
 
@@ -35,6 +39,7 @@ class P1MeterController(
 
     fun startPolling() {
         if (pollingJob?.isActive == true) return
+        Log.i(TAG, "Starting P1 polling for ${credential.ipAddress}:${credential.port}")
         pollingJob = scope.launch(Dispatchers.IO) {
             while (true) {
                 fetchOnce()
@@ -50,7 +55,7 @@ class P1MeterController(
 
     suspend fun fetchOnce(): CommandResult = withContext(Dispatchers.IO) {
         runCatching {
-            val url = "http://${credential.ipAddress}:${credential.port}/api/v1/data"
+            val url = "http://${credential.ipAddress}:${credential.port}/json"
             val request = Request.Builder().url(url).get().build()
 
             httpClient.newCall(request).execute().use { response ->
@@ -60,16 +65,78 @@ class P1MeterController(
                 val body = response.body?.string().orEmpty()
                 val parsed = adapter.fromJson(body) ?: error("Empty/invalid P1 meter response")
 
+                val ts = System.currentTimeMillis()
                 val entity = P1DataEntity(
-                    timestamp = parsed.timestamp ?: System.currentTimeMillis(),
+                    timestamp = ts,
                     powerW = parsed.powerW,
-                    voltageV = parsed.voltageV
+                    voltageV = parsed.voltageV,
+                    powerImportW = parsed.powerImportW,
+                    powerExportW = parsed.powerExportW,
+                    l1V = parsed.l1V,
+                    l2V = parsed.l2V,
+                    l3V = parsed.l3V,
+                    l1A = parsed.l1A,
+                    l2A = parsed.l2A,
+                    l3A = parsed.l3A,
+                    powerImportL1W = parsed.powerImportL1W,
+                    powerImportL2W = parsed.powerImportL2W,
+                    powerImportL3W = parsed.powerImportL3W,
+                    powerExportL1W = parsed.powerExportL1W,
+                    powerExportL2W = parsed.powerExportL2W,
+                    powerExportL3W = parsed.powerExportL3W,
+                    powerFactor = parsed.powerFactor,
+                    frequencyHz = parsed.frequencyHz,
+                    importT1Kwh = parsed.importT1Kwh,
+                    importT2Kwh = parsed.importT2Kwh,
+                    exportT1Kwh = parsed.exportT1Kwh,
+                    exportT2Kwh = parsed.exportT2Kwh,
+                    currentTariff = parsed.currentTariff
                 )
                 p1Dao.insert(entity)
+
+                p1RawDao?.insert(P1RawData(
+                    timestamp = ts,
+                    importT1Kwh = parsed.importT1Kwh,
+                    importT2Kwh = parsed.importT2Kwh,
+                    exportT1Kwh = parsed.exportT1Kwh,
+                    exportT2Kwh = parsed.exportT2Kwh,
+                    importTotalKwh = parsed.importTotalKwh,
+                    exportTotalKwh = parsed.exportTotalKwh,
+                    currentPowerW = parsed.powerW,
+                    powerImportW = parsed.powerImportW,
+                    powerExportW = parsed.powerExportW,
+                    l1V = parsed.l1V,
+                    l2V = parsed.l2V,
+                    l3V = parsed.l3V,
+                    l1A = parsed.l1A,
+                    l2A = parsed.l2A,
+                    l3A = parsed.l3A,
+                    powerImportL1W = parsed.powerImportL1W,
+                    powerImportL2W = parsed.powerImportL2W,
+                    powerImportL3W = parsed.powerImportL3W,
+                    powerExportL1W = parsed.powerExportL1W,
+                    powerExportL2W = parsed.powerExportL2W,
+                    powerExportL3W = parsed.powerExportL3W,
+                    powerFactor = parsed.powerFactor,
+                    powerFactorL1 = parsed.powerFactorL1,
+                    powerFactorL2 = parsed.powerFactorL2,
+                    powerFactorL3 = parsed.powerFactorL3,
+                    frequencyHz = parsed.frequencyHz,
+                    reactiveImportKwh = parsed.reactiveImportKwh,
+                    reactiveExportKwh = parsed.reactiveExportKwh,
+                    currentTariff = parsed.currentTariff,
+                    meterSerial = parsed.meterSerial,
+                    deviceName = parsed.deviceName,
+                    firmwareVersion = parsed.firmwareVersion,
+                    circuitBreakerStatus = parsed.circuitBreakerStatus,
+                    limiterThreshold = parsed.limiterThresholdStr?.toDoubleOrNull() ?: 0.0
+                ))
+
                 entity
             }
         }.fold(
             onSuccess = { entity ->
+                Log.i(TAG, "P1 reading: power=${entity.powerW}W voltage=${entity.voltageV}V")
                 CommandResult.Success(
                     mapOf(
                         "timestamp" to entity.timestamp,
@@ -78,7 +145,10 @@ class P1MeterController(
                     )
                 )
             },
-            onFailure = { throwable -> CommandResult.Failure(throwable.message ?: "Unknown P1 meter error") }
+            onFailure = { throwable ->
+                Log.e(TAG, "P1 fetch failed: ${throwable.message}", throwable)
+                CommandResult.Failure(throwable.message ?: "Unknown P1 meter error")
+            }
         )
     }
 
@@ -87,5 +157,9 @@ class P1MeterController(
             "refresh" -> fetchOnce()
             else -> CommandResult.Failure("Unsupported action '$action' for P1 meter")
         }
+    }
+
+    companion object {
+        private const val TAG = "P1MeterController"
     }
 }

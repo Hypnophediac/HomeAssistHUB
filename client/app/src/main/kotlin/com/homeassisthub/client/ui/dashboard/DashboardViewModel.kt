@@ -1,6 +1,7 @@
 package com.homeassisthub.client.ui.dashboard
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeassisthub.client.data.ClientConfig
@@ -9,7 +10,9 @@ import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
 import com.homeassisthub.client.network.model.P1ReadingDto
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.json.JSONObject
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -31,11 +34,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
-    /**
-     * Refreshes plug list + P1 history through the cloud relay
-     * (`command_request`/`command_response`), so this works from anywhere
-     * (mobile data), not just when the Client is on the Hub's local LAN.
-     */
     fun refresh() {
         viewModelScope.launch {
             val config = configStore.getConfig()
@@ -45,13 +43,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             }
             val manager = ensureSocketConnected(config)
             runCatching {
-                val devicesResponse = manager.sendCommand("hub", "list_devices")
+                val devicesResponse = retryCommand(manager, "hub", "list_devices")
                 if (!devicesResponse.optBoolean("success")) error(devicesResponse.optString("error", "Unknown error"))
                 val devicesJson = devicesResponse.optJSONObject("data")?.optJSONArray("devices")
                 _plugs.value = JsonParsing.parseList(devicesJson, DeviceCredentialSummaryDto::class.java)
                     .filter { it.deviceType == "smart_plug" }
 
-                val historyResponse = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to "100"))
+                val historyResponse = retryCommand(manager, "hub", "get_p1_history", mapOf("limit" to "100"))
                 if (!historyResponse.optBoolean("success")) error(historyResponse.optString("error", "Unknown error"))
                 val readingsJson = historyResponse.optJSONObject("data")?.optJSONArray("readings")
                 _p1History.value = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
@@ -59,6 +57,27 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 _statusMessage.value = "Hiba a Hub elérésekor: ${it.message}"
             }
         }
+    }
+
+    /** Retries a command up to 3 times with 3s delay, in case the Hub isn't connected to the relay yet. */
+    private suspend fun retryCommand(
+        manager: SocketIoManager,
+        deviceId: String,
+        action: String,
+        params: Map<String, String> = emptyMap()
+    ): JSONObject {
+        var lastResponse: JSONObject = JSONObject().put("success", false).put("error", "No attempts made")
+        for (attempt in 1..3) {
+            lastResponse = manager.sendCommand(deviceId, action, params)
+            if (lastResponse.optBoolean("success")) return lastResponse
+            val errorMsg = lastResponse.optString("error", "")
+            if (errorMsg.contains("Timeout") && attempt < 3) {
+                delay(3_000L)
+            } else {
+                return lastResponse
+            }
+        }
+        return lastResponse
     }
 
     fun togglePlug(deviceId: String, turnOn: Boolean) {
@@ -76,6 +95,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun ensureSocketConnected(config: ClientConfig): SocketIoManager {
         return socketManager ?: SocketIoManager(config.relayUrl, config.homeId).also {
+            it.setOnPeerJoined { role ->
+                if (role == "hub") {
+                    Log.i("DashboardVM", "Hub joined relay, auto-refreshing")
+                    refresh()
+                }
+            }
             it.connect()
             socketManager = it
         }

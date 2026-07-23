@@ -1,19 +1,17 @@
 package com.homeassisthub.hub.controller
 
+import android.content.Context
 import com.homeassisthub.hub.data.db.P1Dao
+import com.homeassisthub.hub.data.db.P1RawDao
 import com.homeassisthub.hub.di.NetworkModule
 import com.homeassisthub.hub.security.DeviceCredential
 import kotlinx.coroutines.CoroutineScope
 
-/**
- * Maps a [DeviceCredential.deviceType] to the concrete [DeviceController]
- * implementation that knows how to talk to it.
- *
- * Supported types: "p1_meter", "smart_plug", "v380_ptz".
- */
 class DeviceControllerFactory(
     private val p1Dao: P1Dao,
-    private val scope: CoroutineScope
+    private val p1RawDao: P1RawDao,
+    private val scope: CoroutineScope,
+    private val context: Context
 ) {
 
     fun create(credential: DeviceCredential): DeviceController? = when (credential.deviceType) {
@@ -22,7 +20,8 @@ class DeviceControllerFactory(
             p1Dao = p1Dao,
             httpClient = NetworkModule.okHttpClient,
             moshi = NetworkModule.moshi,
-            scope = scope
+            scope = scope,
+            p1RawDao = p1RawDao
         )
         DEVICE_TYPE_SMART_PLUG -> SmartPlugController(
             credential = credential,
@@ -32,6 +31,14 @@ class DeviceControllerFactory(
             credential = credential,
             httpClient = NetworkModule.okHttpClient
         )
+        DEVICE_TYPE_RTSP_CAMERA -> RtspCameraController(
+            credential = credential,
+            context = context
+        )
+        DEVICE_TYPE_HUAWEI_INVERTER -> HuaweiInverterController(
+            credential = credential,
+            scope = scope
+        )
         else -> null
     }
 
@@ -39,5 +46,7 @@ class DeviceControllerFactory(
         const val DEVICE_TYPE_P1_METER = "p1_meter"
         const val DEVICE_TYPE_SMART_PLUG = "smart_plug"
         const val DEVICE_TYPE_V380_PTZ = "v380_ptz"
+        const val DEVICE_TYPE_RTSP_CAMERA = "rtsp_camera"
+        const val DEVICE_TYPE_HUAWEI_INVERTER = "huawei_inverter"
     }
 }

@@ -36,6 +36,24 @@ object OnvifSoapBuilder {
         return envelope(body, username, password)
     }
 
+    fun getSnapshot(profileToken: String, username: String, password: String): String {
+        val body = """
+            <trt:GetSnapshot xmlns:trt="http://www.onvif.org/ver10/media/wsdl">
+              <trt:ProfileToken>$profileToken</trt:ProfileToken>
+            </trt:GetSnapshot>
+        """.trimIndent()
+        return envelope(body, username, password)
+    }
+
+    fun getSnapshotUri(profileToken: String, username: String, password: String): String {
+        val body = """
+            <trt:GetSnapshotUri xmlns:trt="http://www.onvif.org/ver10/media/wsdl">
+              <trt:ProfileToken>$profileToken</trt:ProfileToken>
+            </trt:GetSnapshotUri>
+        """.trimIndent()
+        return envelope(body, username, password)
+    }
+
     private fun envelope(bodyXml: String, username: String, password: String): String {
         val created = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
         val nonceBytes = ByteArray(16).also { SecureRandom().nextBytes(it) }

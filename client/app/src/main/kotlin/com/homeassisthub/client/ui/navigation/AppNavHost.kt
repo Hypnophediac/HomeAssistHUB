@@ -2,8 +2,10 @@ package com.homeassisthub.client.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.ElectricalServices
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -19,7 +21,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.homeassisthub.client.R
+import com.homeassisthub.client.ui.camera.CameraScreen
 import com.homeassisthub.client.ui.dashboard.DashboardScreen
+import com.homeassisthub.client.ui.energy.EnergyDashboardScreen
 import com.homeassisthub.client.ui.settings.SettingsScreen
 
 @Composable
@@ -35,6 +39,8 @@ fun AppNavHost() {
             modifier = Modifier.padding(padding)
         ) {
             composable(NavRoutes.DASHBOARD) { DashboardScreen() }
+            composable(NavRoutes.ENERGY) { EnergyDashboardScreen() }
+            composable(NavRoutes.CAMERAS) { CameraScreen() }
             composable(NavRoutes.SETTINGS) { SettingsScreen() }
         }
     }
@@ -43,7 +49,9 @@ fun AppNavHost() {
 @Composable
 private fun BottomNavBar(navController: androidx.navigation.NavHostController) {
     val items = listOf(
-        NavRoutes.DASHBOARD to Icons.Filled.Home,
+        NavRoutes.DASHBOARD to Icons.Filled.Dashboard,
+        NavRoutes.ENERGY to Icons.Filled.ElectricalServices,
+        NavRoutes.CAMERAS to Icons.Filled.Videocam,
         NavRoutes.SETTINGS to Icons.Filled.Settings
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -71,6 +79,8 @@ private fun BottomNavBar(navController: androidx.navigation.NavHostController) {
 @Composable
 private fun labelFor(route: String): String = when (route) {
     NavRoutes.DASHBOARD -> androidx.compose.ui.res.stringResource(R.string.nav_dashboard)
+    NavRoutes.ENERGY -> "Energia"
+    NavRoutes.CAMERAS -> "Kamerák"
     NavRoutes.SETTINGS -> androidx.compose.ui.res.stringResource(R.string.nav_settings)
     else -> route
 }
