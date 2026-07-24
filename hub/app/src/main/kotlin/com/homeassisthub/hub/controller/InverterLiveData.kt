@@ -23,6 +23,7 @@ object InverterLiveData {
         lastUpdateMs = System.currentTimeMillis()
     }
 
-    /** True if we have a reading from the last 2 minutes; stale data is ignored by consumers. */
-    fun isFresh(): Boolean = lastUpdateMs > 0L && (System.currentTimeMillis() - lastUpdateMs) < 120_000L
+    /** True if we have a reading from the last 6 minutes; stale data is ignored by consumers.
+     *  6 min > 5 min scraper interval, so the Kiosk scraper's data is always considered fresh. */
+    fun isFresh(): Boolean = lastUpdateMs > 0L && (System.currentTimeMillis() - lastUpdateMs) < 360_000L
 }

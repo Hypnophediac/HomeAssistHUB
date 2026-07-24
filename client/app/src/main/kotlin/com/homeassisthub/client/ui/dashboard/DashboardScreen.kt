@@ -258,18 +258,18 @@ private fun P1PowerCard(readings: List<P1ReadingDto>) {
                         },
                         color = Color(0xFFF59E0B)
                     )
+                    val isExporting = latest.powerExportW > latest.powerImportW
+                    val netPowerW = kotlin.math.abs(latest.powerImportW - latest.powerExportW).toInt()
                     StatChip(
-                        label = "Hálózati Egyenleg",
-                        value = "${(latest.powerImportW - latest.powerExportW).toInt()} W",
-                        color = if (latest.powerImportW > latest.powerExportW)
-                            MaterialTheme.colorScheme.error
-                        else
-                            Color(0xFF2E7D32)
+                        label = if (isExporting) "Betáplálás" else "Vételezés",
+                        value = if (netPowerW > 0) "${netPowerW} W" else "— W",
+                        color = if (isExporting) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
                     )
+                    val houseW = maxOf(0.0, latest.realConsumptionW).toInt()
                     StatChip(
                         label = "Ház Fogyasztás",
                         value = if (latest.inverterPowerW > 0.0 || latest.realConsumptionW > 0.0) {
-                            "${latest.realConsumptionW.toInt()} W"
+                            "${houseW} W"
                         } else {
                             "— W"
                         },

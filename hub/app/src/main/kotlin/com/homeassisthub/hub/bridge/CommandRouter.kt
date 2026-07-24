@@ -160,7 +160,9 @@ class CommandRouter(
                         val hasInverterData = if (isLatest) inverterFresh else (histInverterPower > 0.0)
                         val realConsumptionW = if (hasInverterData) {
                             // Full formula: production - export + import = house consumption
-                            histInverterPower - it.powerExportW + it.powerImportW
+                            // Floor at 0: inverter data is 5-min delayed vs P1, so sudden
+                            // sunlight can make the formula go negative temporarily.
+                            maxOf(0.0, histInverterPower - it.powerExportW + it.powerImportW)
                         } else {
                             // No inverter data for this reading: fall back to grid import
                             it.powerImportW
