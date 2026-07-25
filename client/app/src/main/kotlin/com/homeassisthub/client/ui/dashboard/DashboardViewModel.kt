@@ -8,6 +8,7 @@ import com.homeassisthub.client.data.ClientConfig
 import com.homeassisthub.client.data.ClientConfigStore
 import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
+import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
 import com.homeassisthub.client.network.model.P1ReadingDto
 import kotlinx.coroutines.delay
@@ -27,6 +28,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _p1History = MutableStateFlow<List<P1ReadingDto>>(emptyList())
     val p1History: StateFlow<List<P1ReadingDto>> = _p1History.asStateFlow()
+
+    private val _dailySummary = MutableStateFlow<DailySummaryDto?>(null)
+    val dailySummary: StateFlow<DailySummaryDto?> = _dailySummary.asStateFlow()
 
     private val _plugStates = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val plugStates: StateFlow<Map<String, Boolean>> = _plugStates.asStateFlow()
@@ -51,8 +55,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
                 val historyResponse = retryCommand(manager, "hub", "get_p1_history", mapOf("limit" to "100"))
                 if (!historyResponse.optBoolean("success")) error(historyResponse.optString("error", "Unknown error"))
-                val readingsJson = historyResponse.optJSONObject("data")?.optJSONArray("readings")
+                val dataObj = historyResponse.optJSONObject("data")
+                val readingsJson = dataObj?.optJSONArray("readings")
                 _p1History.value = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
+                val summaryJson = dataObj?.optJSONObject("dailySummary")
+                _dailySummary.value = summaryJson?.let {
+                    DailySummaryDto(
+                        inverterDailyKwh = it.optDouble("inverterDailyKwh", 0.0),
+                        p1DailyImportKwh = it.optDouble("p1DailyImportKwh", 0.0),
+                        p1DailyExportKwh = it.optDouble("p1DailyExportKwh", 0.0),
+                        houseDailyKwh = it.optDouble("houseDailyKwh", 0.0)
+                    )
+                }
             }.onFailure {
                 _statusMessage.value = "Hiba a Hub elérésekor: ${it.message}"
             }

@@ -1,0 +1,122 @@
+package com.homeassisthub.hub.controller
+
+import java.util.ArrayDeque
+import java.util.Calendar
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
+
+/**
+ * Thread-safe ring buffer that stores the last 10 minutes of P1 meter readings.
+ *
+ * The Huawei Kiosk API has ~5 min delay vs the real-time P1 meter.
+ * To compute an accurate "House Consumption", we need the P1 reading from
+ * T-5min that temporally aligns with the delayed inverter data.
+ *
+ * Also stores the midnight kWh baseline for daily delta calculations.
+ */
+object P1HistoryBuffer {
+
+    data class P1Snapshot(
+        val timestamp: Long,
+        val powerImportW: Double,
+        val powerExportW: Double,
+        val importT1Kwh: Double,
+        val importT2Kwh: Double,
+        val exportT1Kwh: Double,
+        val exportT2Kwh: Double
+    ) {
+        val totalImportKwh: Double get() = importT1Kwh + importT2Kwh
+        val totalExportKwh: Double get() = exportT1Kwh + exportT2Kwh
+    }
+
+    private val BUFFER_MAX_AGE_MS = 600_000L // 10 minutes
+    private val lock = ReentrantReadWriteLock()
+    private val deque = ArrayDeque<P1Snapshot>()
+
+    @Volatile
+    var latestSnapshot: P1Snapshot? = null
+        private set
+
+    /** The first P1 reading on the current calendar day — used as baseline for daily kWh deltas. */
+    @Volatile
+    private var midnightBaseline: P1Snapshot? = null
+
+    @Volatile
+    private var baselineDay: Int = -1
+
+    /**
+     * Called by [P1MeterController] on every successful poll.
+     * Adds the reading, evicts old entries, and updates the midnight baseline.
+     */
+    fun add(snapshot: P1Snapshot) {
+        lock.write {
+            deque.addLast(snapshot)
+            latestSnapshot = snapshot
+
+            // Track the first reading of each calendar day as the midnight baseline
+            val cal = Calendar.getInstance().apply { timeInMillis = snapshot.timestamp }
+            val today = cal.get(Calendar.DAY_OF_YEAR)
+            if (today != baselineDay) {
+                baselineDay = today
+                midnightBaseline = snapshot
+                android.util.Log.i("P1HistoryBuffer", "New midnight baseline: import=${snapshot.totalImportKwh}kWh export=${snapshot.totalExportKwh}kWh")
+            }
+
+            val cutoff = snapshot.timestamp - BUFFER_MAX_AGE_MS
+            while (deque.isNotEmpty() && deque.peekFirst().timestamp < cutoff) {
+                deque.pollFirst()
+            }
+        }
+    }
+
+    /**
+     * Finds the P1 snapshot closest to [targetTimestamp] within [toleranceMs].
+     * Used by [HuaweiCloudScraper] to get the T-5min P1 reading that aligns
+     * with the delayed inverter data.
+     */
+    fun findClosest(targetTimestamp: Long, toleranceMs: Long = 120_000L): P1Snapshot? {
+        return lock.read {
+            if (deque.isEmpty()) return@read null
+            var best: P1Snapshot? = null
+            var bestDiff = Long.MAX_VALUE
+            for (snap in deque) {
+                val diff = kotlin.math.abs(snap.timestamp - targetTimestamp)
+                if (diff < bestDiff && diff <= toleranceMs) {
+                    bestDiff = diff
+                    best = snap
+                }
+            }
+            best
+        }
+    }
+
+    /**
+     * Convenience: find the P1 reading from approximately [minutesAgo] ago.
+     */
+    fun findMinutesAgo(minutesAgo: Int): P1Snapshot? {
+        val target = System.currentTimeMillis() - minutesAgo * 60_000L
+        return findClosest(target)
+    }
+
+    /**
+     * Returns the daily import/export kWh deltas computed from the midnight baseline.
+     * If no baseline exists yet (first reading of the day), returns the current cumulative values.
+     */
+    fun getDailyKwhDeltas(): Pair<Double, Double> {
+        val baseline = midnightBaseline
+        val latest = latestSnapshot
+        if (baseline == null || latest == null) return 0.0 to 0.0
+        val dailyImport = maxOf(0.0, latest.totalImportKwh - baseline.totalImportKwh)
+        val dailyExport = maxOf(0.0, latest.totalExportKwh - baseline.totalExportKwh)
+        return dailyImport to dailyExport
+    }
+
+    fun clear() {
+        lock.write { deque.clear() }
+        latestSnapshot = null
+        midnightBaseline = null
+        baselineDay = -1
+    }
+}
+

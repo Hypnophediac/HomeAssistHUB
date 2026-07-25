@@ -121,3 +121,11 @@ data class EnergyPeriodResponseDto(
     val totalConsumedKwh: Double,
     val totalExportedKwh: Double
 )
+
+@JsonClass(generateAdapter = true)
+data class DailySummaryDto(
+    val inverterDailyKwh: Double = 0.0,
+    val p1DailyImportKwh: Double = 0.0,
+    val p1DailyExportKwh: Double = 0.0,
+    val houseDailyKwh: Double = 0.0
+)

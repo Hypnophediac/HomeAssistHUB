@@ -112,15 +112,22 @@ class CommandRouter(
         "get_p1_history" -> {
             val limit = params["limit"]?.toIntOrNull() ?: 100
             val readings = p1Dao.getRecent(limit)
-            // Merge the Huawei inverter's live production into the *last*
-            // (most recent) reading only — we don't have historical inverter
-            // data to align with older P1 rows, so only "now" is meaningful:
-            //   RealConsumptionW = InverterProductionW - P1ExportW + P1ImportW
+
+            // The HuaweiCloudScraper computes a synchronized realConsumptionW
+            // using T-5min P1 data (matching the Kiosk API delay) and caches it
+            // in InverterLiveData. We use that cached value for the latest reading.
             val inverterFresh = com.homeassisthub.hub.controller.InverterLiveData.isFresh()
             val inverterPowerW = if (inverterFresh) {
                 com.homeassisthub.hub.controller.InverterLiveData.activePowerW
             } else 0.0
-            // Also fetch historical inverter data to merge into older readings
+            val cachedRealConsumptionW = if (inverterFresh) {
+                com.homeassisthub.hub.controller.InverterLiveData.realConsumptionW
+            } else 0.0
+            val inverterDailyKwh = if (inverterFresh) {
+                com.homeassisthub.hub.controller.InverterLiveData.dailyEnergyKwh
+            } else 0.0
+
+            // Fetch historical inverter data to merge into older readings
             val inverterHistory = inverterHistoryDao?.let { dao ->
                 if (readings.isNotEmpty()) {
                     val oldestTs = readings.first().timestamp
@@ -128,12 +135,9 @@ class CommandRouter(
                     dao.getRange(oldestTs, newestTs)
                 } else emptyList()
             } ?: emptyList()
-            // Build a lookup map: timestamp -> activePowerW (closest match within 5 min tolerance)
             val inverterByTime = inverterHistory.associate { it.timestamp to it.activePowerW }
             fun findInverterPower(ts: Long): Double {
-                // Try exact match first
                 inverterByTime[ts]?.let { return it }
-                // Find closest within ±5 minutes (300000 ms)
                 val tolerance = 300_000L
                 var bestPower = 0.0
                 var bestDiff = Long.MAX_VALUE
@@ -146,25 +150,28 @@ class CommandRouter(
                 }
                 return bestPower
             }
+
+            // Compute daily summary from hardware kWh counters:
+            //   HouseDailyKwh = InverterDailyYield + P1DailyImport - P1DailyExport
+            // P1 kWh counters are cumulative — use midnight baseline deltas from P1HistoryBuffer
+            val (p1DailyImportKwh, p1DailyExportKwh) = com.homeassisthub.hub.controller.P1HistoryBuffer.getDailyKwhDeltas()
+            val houseDailyKwh = maxOf(0.0, inverterDailyKwh + p1DailyImportKwh - p1DailyExportKwh)
+
             CommandResult.Success(
                 mapOf(
                     "readings" to readings.mapIndexed { index, it ->
                         val isLatest = index == readings.lastIndex
-                        // When inverter data is available:
-                        //   RealConsumptionW = InverterProductionW - P1ExportW + P1ImportW
-                        // When no inverter is configured, fall back to P1 import
-                        // (grid import = house consumption, since there's no solar production to account for)
-                        // For latest reading, use live inverter data; for historical readings,
-                        // use the backfilled inverter history if available
+                        // For latest reading: use the cached synchronized value from InverterLiveData
+                        // (computed by HuaweiCloudScraper using T-5min P1 data).
+                        // For historical readings: use backfilled inverter history if available.
                         val histInverterPower = if (isLatest) inverterPowerW else findInverterPower(it.timestamp)
                         val hasInverterData = if (isLatest) inverterFresh else (histInverterPower > 0.0)
-                        val realConsumptionW = if (hasInverterData) {
-                            // Full formula: production - export + import = house consumption
-                            // Floor at 0: inverter data is 5-min delayed vs P1, so sudden
-                            // sunlight can make the formula go negative temporarily.
+                        val realConsumptionW = if (isLatest) {
+                            // Use the synchronized cached value for the latest reading
+                            if (inverterFresh) cachedRealConsumptionW else it.powerImportW
+                        } else if (hasInverterData) {
                             maxOf(0.0, histInverterPower - it.powerExportW + it.powerImportW)
                         } else {
-                            // No inverter data for this reading: fall back to grid import
                             it.powerImportW
                         }
                         mapOf(
@@ -195,7 +202,13 @@ class CommandRouter(
                             "inverterPowerW" to histInverterPower,
                             "realConsumptionW" to realConsumptionW
                         )
-                    }
+                    },
+                    "dailySummary" to mapOf(
+                        "inverterDailyKwh" to inverterDailyKwh,
+                        "p1DailyImportKwh" to p1DailyImportKwh,
+                        "p1DailyExportKwh" to p1DailyExportKwh,
+                        "houseDailyKwh" to houseDailyKwh
+                    )
                 )
             )
         }

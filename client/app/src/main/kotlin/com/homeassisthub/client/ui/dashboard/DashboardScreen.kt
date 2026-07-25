@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ElectricalServices
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SolarPower
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homeassisthub.client.R
 import com.homeassisthub.client.network.model.P1ReadingDto
+import com.homeassisthub.client.network.model.DailySummaryDto
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -56,6 +58,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
     val plugs by viewModel.plugs.collectAsState()
     val plugStates by viewModel.plugStates.collectAsState()
     val p1History by viewModel.p1History.collectAsState()
+    val dailySummary by viewModel.dailySummary.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.refresh() }
@@ -82,6 +85,12 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
 
         item {
             P1PowerCard(readings = p1History)
+        }
+
+        dailySummary?.let { summary ->
+            item {
+                DailySummaryCard(summary = summary)
+            }
         }
 
         item {
@@ -448,4 +457,96 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
             .fillMaxWidth()
             .height(180.dp)
     )
+}
+
+@Composable
+private fun DailySummaryCard(summary: DailySummaryDto) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.SolarPower,
+                    contentDescription = null,
+                    tint = Color(0xFFF59E0B),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Napi Összesítő (0–24h)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                DailyStatChip(
+                    label = "Napelem Termelés",
+                    value = "%.2f kWh".format(summary.inverterDailyKwh),
+                    color = Color(0xFFF59E0B)
+                )
+                DailyStatChip(
+                    label = "Vételezés",
+                    value = "%.2f kWh".format(summary.p1DailyImportKwh),
+                    color = MaterialTheme.colorScheme.error
+                )
+                DailyStatChip(
+                    label = "Betáplálás",
+                    value = "%.2f kWh".format(summary.p1DailyExportKwh),
+                    color = Color(0xFF2E7D32)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Bolt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Ház Napi Fogyasztás: %.2f kWh".format(summary.houseDailyKwh),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyStatChip(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }

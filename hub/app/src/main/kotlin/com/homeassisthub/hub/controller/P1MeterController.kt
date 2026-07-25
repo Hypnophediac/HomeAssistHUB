@@ -94,6 +94,19 @@ class P1MeterController(
                 )
                 p1Dao.insert(entity)
 
+                // Push into the time-series buffer for Kiosk scraper synchronization
+                P1HistoryBuffer.add(
+                    P1HistoryBuffer.P1Snapshot(
+                        timestamp = ts,
+                        powerImportW = parsed.powerImportW,
+                        powerExportW = parsed.powerExportW,
+                        importT1Kwh = parsed.importT1Kwh,
+                        importT2Kwh = parsed.importT2Kwh,
+                        exportT1Kwh = parsed.exportT1Kwh,
+                        exportT2Kwh = parsed.exportT2Kwh
+                    )
+                )
+
                 p1RawDao?.insert(P1RawData(
                     timestamp = ts,
                     importT1Kwh = parsed.importT1Kwh,

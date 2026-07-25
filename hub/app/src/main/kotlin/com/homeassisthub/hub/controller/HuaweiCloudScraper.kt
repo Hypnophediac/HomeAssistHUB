@@ -92,8 +92,30 @@ class HuaweiCloudScraper(
         val realTimePowerKw = realKpi?.optDouble("realTimePower", 0.0) ?: 0.0
         val activePowerW = (realTimePowerKw * 1000.0)
 
+        // Daily yield (kWh) from Kiosk API — hardware counter, precise
+        val dailyEnergyKwh = realKpi?.optDouble("dailyEnergy", 0.0) ?: 0.0
+
         InverterLiveData.update(activePowerW)
-        Log.i(TAG, "Kiosk scrape OK: ${activePowerW}W (realTimePower=${realTimePowerKw}kW)")
+        Log.i(TAG, "Kiosk scrape OK: ${activePowerW}W (realTimePower=${realTimePowerKw}kW), daily=${dailyEnergyKwh}kWh")
+
+        // Compute synchronized house consumption using T-5min P1 data.
+        // The Kiosk API is ~5 min delayed vs the real-time P1 meter, so we
+        // must use the P1 reading from 5 minutes ago to get a physically
+        // correct calculation:
+        //   RealConsumptionW = InverterProductionW - P1ExportW(T-5) + P1ImportW(T-5)
+        val p1Sync = P1HistoryBuffer.findMinutesAgo(5)
+        val realConsumptionW = if (p1Sync != null) {
+            val computed = activePowerW - p1Sync.powerExportW + p1Sync.powerImportW
+            val floored = maxOf(0.0, computed)
+            Log.i(TAG, "Synced house consumption: ${floored}W (inverter=${activePowerW}W, P1@T-5: import=${p1Sync.powerImportW}W export=${p1Sync.powerExportW}W)")
+            floored
+        } else {
+            Log.i(TAG, "No P1 data from T-5min available, house consumption = 0")
+            0.0
+        }
+
+        // Cache the synchronized consumption + daily yield for CommandRouter
+        InverterLiveData.updateRealConsumption(realConsumptionW, dailyEnergyKwh)
 
         // Also store today's power curve as history points
         val powerCurve = data.optJSONObject("powerCurve")
