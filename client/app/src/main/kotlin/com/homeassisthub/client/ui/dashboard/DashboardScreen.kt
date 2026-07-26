@@ -484,23 +484,28 @@ private fun DailySummaryCard(summary: DailySummaryDto) {
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
+            // Round to 2 decimals so visual addition is correct: Termelés + Vételezés - Betáplálás = Ház
+            val rInverter = "%.2f".format(summary.inverterDailyKwh).replace(',', '.').toDouble()
+            val rImport = "%.2f".format(summary.p1DailyImportKwh).replace(',', '.').toDouble()
+            val rExport = "%.2f".format(summary.p1DailyExportKwh).replace(',', '.').toDouble()
+            val rHouse = "%.2f".format(summary.houseDailyKwh).replace(',', '.').toDouble()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 DailyStatChip(
                     label = "Napelem Termelés",
-                    value = "%.2f kWh".format(summary.inverterDailyKwh),
+                    value = "%.2f kWh".format(rInverter),
                     color = Color(0xFFF59E0B)
                 )
                 DailyStatChip(
                     label = "Vételezés",
-                    value = "%.2f kWh".format(summary.p1DailyImportKwh),
+                    value = "%.2f kWh".format(rImport),
                     color = MaterialTheme.colorScheme.error
                 )
                 DailyStatChip(
                     label = "Betáplálás",
-                    value = "%.2f kWh".format(summary.p1DailyExportKwh),
+                    value = "%.2f kWh".format(rExport),
                     color = Color(0xFF2E7D32)
                 )
             }
@@ -523,7 +528,7 @@ private fun DailySummaryCard(summary: DailySummaryDto) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Ház Napi Fogyasztás: %.2f kWh".format(summary.houseDailyKwh),
+                        text = "Ház Napi Fogyasztás: %.2f kWh".format(rHouse),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer

@@ -100,10 +100,8 @@ class P1MeterController(
                         timestamp = ts,
                         powerImportW = parsed.powerImportW,
                         powerExportW = parsed.powerExportW,
-                        importT1Kwh = parsed.importT1Kwh,
-                        importT2Kwh = parsed.importT2Kwh,
-                        exportT1Kwh = parsed.exportT1Kwh,
-                        exportT2Kwh = parsed.exportT2Kwh
+                        importTotalKwh = parsed.importTotalKwh,
+                        exportTotalKwh = parsed.exportTotalKwh
                     )
                 )
 

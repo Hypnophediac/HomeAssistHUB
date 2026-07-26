@@ -21,13 +21,11 @@ object P1HistoryBuffer {
         val timestamp: Long,
         val powerImportW: Double,
         val powerExportW: Double,
-        val importT1Kwh: Double,
-        val importT2Kwh: Double,
-        val exportT1Kwh: Double,
-        val exportT2Kwh: Double
+        val importTotalKwh: Double,
+        val exportTotalKwh: Double
     ) {
-        val totalImportKwh: Double get() = importT1Kwh + importT2Kwh
-        val totalExportKwh: Double get() = exportT1Kwh + exportT2Kwh
+        /** Net grid power: positive = importing, negative = exporting. */
+        val netGridW: Double get() = powerImportW - powerExportW
     }
 
     private val BUFFER_MAX_AGE_MS = 600_000L // 10 minutes
@@ -60,7 +58,7 @@ object P1HistoryBuffer {
             if (today != baselineDay) {
                 baselineDay = today
                 midnightBaseline = snapshot
-                android.util.Log.i("P1HistoryBuffer", "New midnight baseline: import=${snapshot.totalImportKwh}kWh export=${snapshot.totalExportKwh}kWh")
+                android.util.Log.i("P1HistoryBuffer", "New midnight baseline: import=${snapshot.importTotalKwh}kWh export=${snapshot.exportTotalKwh}kWh")
             }
 
             val cutoff = snapshot.timestamp - BUFFER_MAX_AGE_MS
@@ -107,8 +105,8 @@ object P1HistoryBuffer {
         val baseline = midnightBaseline
         val latest = latestSnapshot
         if (baseline == null || latest == null) return 0.0 to 0.0
-        val dailyImport = maxOf(0.0, latest.totalImportKwh - baseline.totalImportKwh)
-        val dailyExport = maxOf(0.0, latest.totalExportKwh - baseline.totalExportKwh)
+        val dailyImport = maxOf(0.0, latest.importTotalKwh - baseline.importTotalKwh)
+        val dailyExport = maxOf(0.0, latest.exportTotalKwh - baseline.exportTotalKwh)
         return dailyImport to dailyExport
     }
 

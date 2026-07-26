@@ -102,12 +102,14 @@ class HuaweiCloudScraper(
         // The Kiosk API is ~5 min delayed vs the real-time P1 meter, so we
         // must use the P1 reading from 5 minutes ago to get a physically
         // correct calculation:
-        //   RealConsumptionW = InverterProductionW - P1ExportW(T-5) + P1ImportW(T-5)
+        //   netGridW = P1ImportW - P1ExportW  (positive = importing, negative = exporting)
+        //   RealConsumptionW = InverterProductionW + netGridW(T-5)
         val p1Sync = P1HistoryBuffer.findMinutesAgo(5)
         val realConsumptionW = if (p1Sync != null) {
-            val computed = activePowerW - p1Sync.powerExportW + p1Sync.powerImportW
+            val netGridW = p1Sync.netGridW
+            val computed = activePowerW + netGridW
             val floored = maxOf(0.0, computed)
-            Log.i(TAG, "Synced house consumption: ${floored}W (inverter=${activePowerW}W, P1@T-5: import=${p1Sync.powerImportW}W export=${p1Sync.powerExportW}W)")
+            Log.i(TAG, "Synced house consumption: ${floored}W (inverter=${activePowerW}W, netGrid@T-5=${netGridW}W)")
             floored
         } else {
             Log.i(TAG, "No P1 data from T-5min available, house consumption = 0")

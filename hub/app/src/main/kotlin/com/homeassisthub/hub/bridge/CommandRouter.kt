@@ -154,8 +154,12 @@ class CommandRouter(
             // Compute daily summary from hardware kWh counters:
             //   HouseDailyKwh = InverterDailyYield + P1DailyImport - P1DailyExport
             // P1 kWh counters are cumulative — use midnight baseline deltas from P1HistoryBuffer
-            val (p1DailyImportKwh, p1DailyExportKwh) = com.homeassisthub.hub.controller.P1HistoryBuffer.getDailyKwhDeltas()
-            val houseDailyKwh = maxOf(0.0, inverterDailyKwh + p1DailyImportKwh - p1DailyExportKwh)
+            // Round to 2 decimals so UI visual addition is correct: Termelés + Vételezés - Betáplálás = Ház
+            val (rawImportKwh, rawExportKwh) = com.homeassisthub.hub.controller.P1HistoryBuffer.getDailyKwhDeltas()
+            val p1DailyImportKwh = Math.round(rawImportKwh * 100.0) / 100.0
+            val p1DailyExportKwh = Math.round(rawExportKwh * 100.0) / 100.0
+            val rInverterDaily = Math.round(inverterDailyKwh * 100.0) / 100.0
+            val houseDailyKwh = maxOf(0.0, rInverterDaily + p1DailyImportKwh - p1DailyExportKwh)
 
             CommandResult.Success(
                 mapOf(
@@ -204,7 +208,7 @@ class CommandRouter(
                         )
                     },
                     "dailySummary" to mapOf(
-                        "inverterDailyKwh" to inverterDailyKwh,
+                        "inverterDailyKwh" to rInverterDaily,
                         "p1DailyImportKwh" to p1DailyImportKwh,
                         "p1DailyExportKwh" to p1DailyExportKwh,
                         "houseDailyKwh" to houseDailyKwh
