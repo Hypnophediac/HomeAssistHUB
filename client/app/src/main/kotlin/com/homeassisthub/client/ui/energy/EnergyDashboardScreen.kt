@@ -300,7 +300,7 @@ private fun EnergyHeader(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "Fogyasztás és visszatáplálás",
+                    text = "Vételezés és visszatáplálás",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -507,7 +507,7 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
     ) {
         SummaryCard(
             modifier = Modifier.weight(1f),
-            title = "Fogyasztás",
+            title = "Vételezés",
             value = "%.2f kWh".format(data.totalConsumedKwh),
             color = Color(0xFFE65100),
             icon = Icons.Filled.Bolt
@@ -527,7 +527,7 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
     ) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
-            title = "Fogyasztás",
+            title = "Vételezés",
             value = "${data.latestPowerImportW.toInt()} W"
         )
         LiveStatCard(
@@ -603,7 +603,7 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
     ) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
-            title = "Max. fogyasztás",
+            title = "Max. vételezés",
             value = "${data.maxImportW.toInt()} W"
         )
         LiveStatCard(
@@ -619,7 +619,7 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
     ) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
-            title = "Csúcs fogyasztás",
+            title = "Csúcs vételezés",
             value = if (data.peakConsumptionHour >= 0) "${data.peakConsumptionHour}:00 (${"%.2f".format(data.peakConsumptionKwh)} kWh)" else "N/A"
         )
         LiveStatCard(
@@ -725,7 +725,7 @@ private fun PeriodSummaryCards(data: EnergyPeriodResponseDto) {
     ) {
         SummaryCard(
             modifier = Modifier.weight(1f),
-            title = "Fogyasztás",
+            title = "Vételezés",
             value = "%.2f kWh".format(data.totalConsumedKwh),
             color = Color(0xFFE65100),
             icon = Icons.Filled.Bolt

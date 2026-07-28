@@ -61,6 +61,30 @@ class CloudSyncManager(
         }
     }
 
+    /** Pushes ALL locally stored daily summaries (P1 + inverter) to the cloud.
+     *  Used at startup to backfill summaries computed before cloud sync was
+     *  configured or while it was unreachable. The relay upserts, so
+     *  re-pushing is idempotent. */
+    fun pushAllDailySummaries() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val config = configStore.getConfig() ?: return@launch
+                if (config.syncToken.isBlank()) return@launch
+                val dates = (
+                    p1DailySummaryDao.getAll().map { it.date } +
+                        inverterDailySummaryDao.getRange("1970-01-01", "2999-12-31").map { it.date }
+                    ).distinct().sorted()
+                for (d in dates) {
+                    pushP1DailySummary(d)
+                    pushInverterDailySummary(d)
+                }
+                Log.i(TAG, "Backfilled ${dates.size} daily summaries to cloud")
+            } catch (e: Exception) {
+                Log.w(TAG, "Daily summary backfill failed: ${e.message}")
+            }
+        }
+    }
+
     /** Pushes a finalized daily summary to the cloud immediately after
      *  the midnight rollover computes it. Retries within the regular sync
      *  loop if this initial push fails. */

@@ -340,7 +340,7 @@ class HubForegroundService : Service() {
             // Run immediately to backfill any missing summaries
             computeAndStoreDailySummary(yesterdayDate())
             computeAndStoreInverterDailySummary(yesterdayDate())
-            cloudSyncManager.pushDailySummary(yesterdayDate())
+            cloudSyncManager.pushAllDailySummaries()
             cleanupOldRawData()
 
             while (isActive) {
