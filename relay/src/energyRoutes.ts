@@ -10,8 +10,6 @@ import {
 
 const router = Router();
 
-// All energy GET routes require syncToken auth
-router.use(syncTokenAuth);
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
 function computeHourlyBuckets(readings: any[]): any[] {
@@ -71,7 +69,7 @@ function dateStringFromCal(d: Date): string {
 }
 
 // ── GET /api/energy/:homeId/daily ──
-router.get("/:homeId/daily", async (req: Request & { homeId?: string }, res: Response) => {
+router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
   const homeId = req.homeId!;
   try {
@@ -123,7 +121,7 @@ router.get("/:homeId/daily", async (req: Request & { homeId?: string }, res: Res
 });
 
 // ── GET /api/energy/:homeId/weekly ──
-router.get("/:homeId/weekly", async (req: Request & { homeId?: string }, res: Response) => {
+router.get("/:homeId/weekly", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
   const homeId = req.homeId!;
   try {
@@ -157,7 +155,7 @@ router.get("/:homeId/weekly", async (req: Request & { homeId?: string }, res: Re
 });
 
 // ── GET /api/energy/:homeId/monthly ──
-router.get("/:homeId/monthly", async (req: Request & { homeId?: string }, res: Response) => {
+router.get("/:homeId/monthly", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
   const homeId = req.homeId!;
   try {
@@ -193,7 +191,7 @@ router.get("/:homeId/monthly", async (req: Request & { homeId?: string }, res: R
 });
 
 // ── GET /api/energy/:homeId/yearly ──
-router.get("/:homeId/yearly", async (req: Request & { homeId?: string }, res: Response) => {
+router.get("/:homeId/yearly", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
   const homeId = req.homeId!;
   try {
@@ -235,7 +233,7 @@ router.get("/:homeId/yearly", async (req: Request & { homeId?: string }, res: Re
 });
 
 // ── GET /api/energy/:homeId/range?startDate=..&endDate=.. ──
-router.get("/:homeId/range", async (req: Request & { homeId?: string }, res: Response) => {
+router.get("/:homeId/range", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
   const homeId = req.homeId!;
   const startDate = req.query.startDate as string;

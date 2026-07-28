@@ -10,12 +10,10 @@ import {
 
 const router = Router();
 
-// All ingest routes require syncToken auth
-router.use(syncTokenAuth);
 
 // ── POST /api/energy/:homeId/ingest ──
 // Body: { p1Readings: [...], inverterReadings: [...] }
-router.post("/:homeId/ingest", async (req: Request & { homeId?: string }, res: Response) => {
+router.post("/:homeId/ingest", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
   const homeId = req.homeId!;
   try {
@@ -81,7 +79,7 @@ router.post("/:homeId/ingest", async (req: Request & { homeId?: string }, res: R
 
 // ── POST /api/energy/:homeId/daily-summary ──
 // Body: { p1Summary: {...}, inverterSummary: { date, producedKwh } }
-router.post("/:homeId/daily-summary", async (req: Request & { homeId?: string }, res: Response) => {
+router.post("/:homeId/daily-summary", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
   const homeId = req.homeId!;
   try {
