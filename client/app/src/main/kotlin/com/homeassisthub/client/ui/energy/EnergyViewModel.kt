@@ -5,11 +5,17 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeassisthub.client.data.ClientConfigStore
+import com.homeassisthub.client.data.PvForecastCalculator
+import com.homeassisthub.client.data.PvForecastResult
 import com.homeassisthub.client.network.JsonParsing
+import com.homeassisthub.client.network.RenderApiService
 import com.homeassisthub.client.network.RetrofitFactory
 import com.homeassisthub.client.network.SocketIoManager
+import com.homeassisthub.client.network.WeatherForecastService
+import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.network.model.EnergyDailyResponseDto
 import com.homeassisthub.client.network.model.EnergyPeriodResponseDto
+import com.homeassisthub.client.network.model.P1ReadingDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +26,7 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
 
     private val configStore = ClientConfigStore(application)
     private var socketManager: SocketIoManager? = null
+    private var renderApi: RenderApiService? = null
 
     private val _dailyData = MutableStateFlow<EnergyDailyResponseDto?>(null)
     val dailyData: StateFlow<EnergyDailyResponseDto?> = _dailyData.asStateFlow()
@@ -33,6 +40,23 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
     private val _yearlyData = MutableStateFlow<EnergyPeriodResponseDto?>(null)
     val yearlyData: StateFlow<EnergyPeriodResponseDto?> = _yearlyData.asStateFlow()
 
+    private val _rangeData = MutableStateFlow<EnergyPeriodResponseDto?>(null)
+    val rangeData: StateFlow<EnergyPeriodResponseDto?> = _rangeData.asStateFlow()
+
+    private val _liveReadings = MutableStateFlow<List<P1ReadingDto>>(emptyList())
+    val liveReadings: StateFlow<List<P1ReadingDto>> = _liveReadings.asStateFlow()
+
+    private val _liveDailySummary = MutableStateFlow<DailySummaryDto?>(null)
+    val liveDailySummary: StateFlow<DailySummaryDto?> = _liveDailySummary.asStateFlow()
+
+    private val _pvForecast = MutableStateFlow<PvForecastResult?>(null)
+    val pvForecast: StateFlow<PvForecastResult?> = _pvForecast.asStateFlow()
+
+    private val _cloudSyncLastTime = MutableStateFlow<Long>(0L)
+    val cloudSyncLastTime: StateFlow<Long> = _cloudSyncLastTime.asStateFlow()
+
+    private val weatherService by lazy { WeatherForecastService.create() }
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -45,135 +69,117 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
                 _statusMessage.value = "Nincs beállítva a relé kapcsolat (lásd Beállítások)."
                 return@launch
             }
+            if (config.syncToken.isBlank()) {
+                _statusMessage.value = "Nincs beállítva a sync token (lásd Beállítások)."
+                return@launch
+            }
             _isLoading.value = true
-            val manager = ensureSocketConnected(config)
+            val authHeader = "Bearer ${config.syncToken}"
+            val api = renderApi ?: RetrofitFactory.createRender(config.relayUrl).also { renderApi = it }
+
+            // Historical energy data from Render/MongoDB
             var anySuccess = false
             runCatching {
-                val dailyResp = retryCommand(manager, "get_energy_daily")
-                if (dailyResp.optBoolean("success")) {
-                    val data = dailyResp.optJSONObject("data")
-                    _dailyData.value = parseDailyResponse(data)
-                    anySuccess = true
-                }
+                _dailyData.value = api.getEnergyDaily(config.homeId, authHeader)
+                anySuccess = true
+            }.onFailure { Log.e("EnergyVM", "Render daily fetch failed", it) }
 
-                val weeklyResp = retryCommand(manager, "get_energy_weekly")
-                if (weeklyResp.optBoolean("success")) {
-                    val data = weeklyResp.optJSONObject("data")
-                    _weeklyData.value = parsePeriodResponse(data)
-                    anySuccess = true
-                }
+            runCatching {
+                _weeklyData.value = api.getEnergyWeekly(config.homeId, authHeader)
+                anySuccess = true
+            }.onFailure { Log.e("EnergyVM", "Render weekly fetch failed", it) }
 
-                val monthlyResp = retryCommand(manager, "get_energy_monthly")
-                if (monthlyResp.optBoolean("success")) {
-                    val data = monthlyResp.optJSONObject("data")
-                    _monthlyData.value = parsePeriodResponse(data)
-                    anySuccess = true
-                }
+            runCatching {
+                _monthlyData.value = api.getEnergyMonthly(config.homeId, authHeader)
+                anySuccess = true
+            }.onFailure { Log.e("EnergyVM", "Render monthly fetch failed", it) }
 
-                val yearlyResp = retryCommand(manager, "get_energy_yearly")
-                if (yearlyResp.optBoolean("success")) {
-                    val data = yearlyResp.optJSONObject("data")
-                    _yearlyData.value = parsePeriodResponse(data)
+            runCatching {
+                _yearlyData.value = api.getEnergyYearly(config.homeId, authHeader)
+                anySuccess = true
+            }.onFailure { Log.e("EnergyVM", "Render yearly fetch failed", it) }
+
+            // Live readings stay on Socket.IO (real-time, direct to Hub)
+            val manager = ensureSocketConnected(config)
+            runCatching {
+                val liveResp = retryCommand(manager, "get_p1_history", mapOf("limit" to "5"))
+                if (liveResp.optBoolean("success")) {
+                    val liveDataObj = liveResp.optJSONObject("data")
+                    val readingsJson = liveDataObj?.optJSONArray("readings")
+                    _liveReadings.value = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
+                    val summaryJson = liveDataObj?.optJSONObject("dailySummary")
+                    _liveDailySummary.value = summaryJson?.let {
+                        DailySummaryDto(
+                            inverterDailyKwh = it.optDouble("inverterDailyKwh", 0.0),
+                            p1DailyImportKwh = it.optDouble("p1DailyImportKwh", 0.0),
+                            p1DailyExportKwh = it.optDouble("p1DailyExportKwh", 0.0),
+                            houseDailyKwh = it.optDouble("houseDailyKwh", 0.0)
+                        )
+                    }
                     anySuccess = true
+                    val cloudSyncObj = liveDataObj?.optJSONObject("cloudSync")
+                    if (cloudSyncObj != null) {
+                        _cloudSyncLastTime.value = cloudSyncObj.optLong("lastSyncTime", 0L)
+                    }
                 }
             }.onFailure {
-                Log.e("EnergyVM", "Socket.IO refresh failed", it)
+                Log.e("EnergyVM", "Socket.IO live readings failed", it)
             }
 
             if (!anySuccess) {
-                Log.i("EnergyVM", "Socket.IO failed, trying LAN Retrofit API at ${config.hubLocalBaseUrl}")
-                runCatching {
-                    val api = RetrofitFactory.create(config.hubLocalBaseUrl)
-                    _dailyData.value = api.getEnergyDaily()
-                    _weeklyData.value = api.getEnergyWeekly()
-                    _monthlyData.value = api.getEnergyMonthly()
-                    _yearlyData.value = api.getEnergyYearly()
-                    anySuccess = true
-                }.onFailure {
-                    Log.e("EnergyVM", "Retrofit LAN API also failed", it)
-                    _statusMessage.value = "Nem érhető el a Hub (sem relé, sem LAN)."
-                }
+                _statusMessage.value = "Nem érhető el a Render API vagy a Hub."
             }
 
             _isLoading.value = false
         }
+
+        fetchPvForecast()
     }
 
-    private fun parseDailyResponse(data: JSONObject?): EnergyDailyResponseDto? {
-        if (data == null) return null
-        val hourlyArr = data.optJSONArray("hourly") ?: return null
-        val hourly = (0 until hourlyArr.length()).map { i ->
-            val item = hourlyArr.getJSONObject(i)
-            com.homeassisthub.client.network.model.EnergyHourlyDto(
-                hour = item.optInt("hour"),
-                consumedKwh = item.optDouble("consumedKwh"),
-                exportedKwh = item.optDouble("exportedKwh")
-            )
+    fun fetchRange(startDate: String, endDate: String) {
+        viewModelScope.launch {
+            val config = configStore.getConfig() ?: run {
+                _statusMessage.value = "Nincs beállítva a relé kapcsolat (lásd Beállítások)."
+                return@launch
+            }
+            if (config.syncToken.isBlank()) {
+                _statusMessage.value = "Nincs beállítva a sync token (lásd Beállítások)."
+                return@launch
+            }
+            _isLoading.value = true
+            val authHeader = "Bearer ${config.syncToken}"
+            val api = renderApi ?: RetrofitFactory.createRender(config.relayUrl).also { renderApi = it }
+            runCatching {
+                _rangeData.value = api.getEnergyRange(config.homeId, authHeader, startDate, endDate)
+            }.onFailure {
+                Log.e("EnergyVM", "Render range fetch failed", it)
+                _statusMessage.value = "Nem érhető el a Render API az egyedi időszakhoz."
+            }
+            _isLoading.value = false
         }
-        return EnergyDailyResponseDto(
-            hourly = hourly,
-            latestPowerW = data.optDouble("latestPowerW"),
-            latestL1V = data.optDouble("latestL1V"),
-            latestL2V = data.optDouble("latestL2V"),
-            latestL3V = data.optDouble("latestL3V"),
-            totalConsumedKwh = data.optDouble("totalConsumedKwh"),
-            totalExportedKwh = data.optDouble("totalExportedKwh"),
-            latestPowerImportW = data.optDouble("latestPowerImportW"),
-            latestPowerExportW = data.optDouble("latestPowerExportW"),
-            latestL1A = data.optDouble("latestL1A"),
-            latestL2A = data.optDouble("latestL2A"),
-            latestL3A = data.optDouble("latestL3A"),
-            latestPowerImportL1W = data.optDouble("latestPowerImportL1W"),
-            latestPowerImportL2W = data.optDouble("latestPowerImportL2W"),
-            latestPowerImportL3W = data.optDouble("latestPowerImportL3W"),
-            latestPowerExportL1W = data.optDouble("latestPowerExportL1W"),
-            latestPowerExportL2W = data.optDouble("latestPowerExportL2W"),
-            latestPowerExportL3W = data.optDouble("latestPowerExportL3W"),
-            latestPowerFactor = data.optDouble("latestPowerFactor"),
-            latestFrequencyHz = data.optDouble("latestFrequencyHz", 50.0),
-            latestCurrentTariff = data.optInt("latestCurrentTariff", 1),
-            minPowerW = data.optDouble("minPowerW"),
-            maxPowerW = data.optDouble("maxPowerW"),
-            avgPowerW = data.optDouble("avgPowerW"),
-            maxImportW = data.optDouble("maxImportW"),
-            maxExportW = data.optDouble("maxExportW"),
-            peakConsumptionHour = data.optInt("peakConsumptionHour", -1),
-            peakExportHour = data.optInt("peakExportHour", -1),
-            peakConsumptionKwh = data.optDouble("peakConsumptionKwh"),
-            peakExportKwh = data.optDouble("peakExportKwh"),
-            selfConsumptionRatio = data.optDouble("selfConsumptionRatio"),
-            netEnergyKwh = data.optDouble("netEnergyKwh"),
-            importT1Kwh = data.optDouble("importT1Kwh"),
-            importT2Kwh = data.optDouble("importT2Kwh"),
-            exportT1Kwh = data.optDouble("exportT1Kwh"),
-            exportT2Kwh = data.optDouble("exportT2Kwh"),
-            avgL1V = data.optDouble("avgL1V"),
-            avgL2V = data.optDouble("avgL2V"),
-            avgL3V = data.optDouble("avgL3V"),
-            avgL1A = data.optDouble("avgL1A"),
-            avgL2A = data.optDouble("avgL2A"),
-            avgL3A = data.optDouble("avgL3A"),
-            avgPowerFactor = data.optDouble("avgPowerFactor"),
-            avgFrequencyHz = data.optDouble("avgFrequencyHz", 50.0)
-        )
     }
 
-    private fun parsePeriodResponse(data: JSONObject?): EnergyPeriodResponseDto? {
-        if (data == null) return null
-        val entriesArr = data.optJSONArray("entries") ?: return null
-        val entries = (0 until entriesArr.length()).map { i ->
-            val item = entriesArr.getJSONObject(i)
-            com.homeassisthub.client.network.model.EnergyPeriodEntryDto(
-                label = item.optString("label"),
-                consumedKwh = item.optDouble("consumedKwh"),
-                exportedKwh = item.optDouble("exportedKwh")
-            )
+    private fun fetchPvForecast() {
+        viewModelScope.launch {
+            val pvConfig = configStore.getPvForecastConfig()
+            if (!pvConfig.isConfigured) {
+                _pvForecast.value = null
+                return@launch
+            }
+            runCatching {
+                val forecast = weatherService.getForecast(
+                    latitude = pvConfig.latitude!!,
+                    longitude = pvConfig.longitude!!
+                )
+                _pvForecast.value = PvForecastCalculator.estimateToday(
+                    forecast = forecast,
+                    pvCapacityKwp = pvConfig.pvCapacityKwp!!,
+                    performanceRatio = pvConfig.performanceRatio
+                )
+            }.onFailure {
+                Log.e("EnergyVM", "Weather forecast fetch failed", it)
+            }
         }
-        return EnergyPeriodResponseDto(
-            entries = entries,
-            totalConsumedKwh = data.optDouble("totalConsumedKwh"),
-            totalExportedKwh = data.optDouble("totalExportedKwh")
-        )
     }
 
     private suspend fun retryCommand(

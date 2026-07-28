@@ -29,6 +29,9 @@ interface InverterHistoryDao {
     @Query("SELECT COUNT(*) FROM inverter_history")
     suspend fun count(): Int
 
+    @Query("SELECT * FROM inverter_history WHERE timestamp > :sinceMs ORDER BY timestamp ASC LIMIT :limit")
+    suspend fun getRangeSince(sinceMs: Long, limit: Int = 500): List<InverterHistoryEntity>
+
     @Query("DELETE FROM inverter_history WHERE timestamp < :olderThanEpochMillis")
     suspend fun deleteOlderThan(olderThanEpochMillis: Long)
 

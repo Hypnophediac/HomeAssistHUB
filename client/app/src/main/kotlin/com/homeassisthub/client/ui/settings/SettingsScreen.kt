@@ -1,6 +1,8 @@
 package com.homeassisthub.client.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.SolarPower
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
@@ -54,6 +57,7 @@ import com.homeassisthub.client.R
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     val config = viewModel.config.value
+    val pvConfig = viewModel.pvForecastConfig.value
     val discovered by viewModel.discovered.collectAsState()
     val savedDevices by viewModel.savedDevices.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
@@ -61,7 +65,13 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     var relayUrl by remember { mutableStateOf(config.relayUrl) }
     var homeId by remember { mutableStateOf(config.homeId) }
     var hubLocalBaseUrl by remember { mutableStateOf(config.hubLocalBaseUrl) }
+    var syncToken by remember { mutableStateOf(config.syncToken) }
     var kioskUrl by remember { mutableStateOf("") }
+
+    var latitude by remember { mutableStateOf(pvConfig.latitude?.toString() ?: "") }
+    var longitude by remember { mutableStateOf(pvConfig.longitude?.toString() ?: "") }
+    var pvCapacityKwp by remember { mutableStateOf(pvConfig.pvCapacityKwp?.toString() ?: "") }
+    var performanceRatioPercent by remember { mutableStateOf((pvConfig.performanceRatio * 100).toInt().toString()) }
 
     var deviceId by remember { mutableStateOf("") }
     var deviceType by remember { mutableStateOf("smart_plug") }
@@ -108,7 +118,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                 onHomeIdChange = { homeId = it },
                 hubLocalBaseUrl = hubLocalBaseUrl,
                 onHubLocalBaseUrlChange = { hubLocalBaseUrl = it },
-                onSave = { viewModel.saveConfig(relayUrl, homeId, hubLocalBaseUrl) }
+                syncToken = syncToken,
+                onSyncTokenChange = { syncToken = it },
+                onSave = { viewModel.saveConfig(relayUrl, homeId, hubLocalBaseUrl, syncToken) }
             )
         }
 
@@ -163,6 +175,22 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                 onKioskUrlChange = { kioskUrl = it },
                 onSave = { viewModel.saveKioskUrl(kioskUrl) },
                 onLoad = { viewModel.loadKioskUrl() }
+            )
+        }
+
+        item {
+            PvForecastCard(
+                latitude = latitude,
+                onLatitudeChange = { latitude = it },
+                longitude = longitude,
+                onLongitudeChange = { longitude = it },
+                pvCapacityKwp = pvCapacityKwp,
+                onPvCapacityKwpChange = { pvCapacityKwp = it },
+                performanceRatioPercent = performanceRatioPercent,
+                onPerformanceRatioPercentChange = { performanceRatioPercent = it },
+                onSave = {
+                    viewModel.savePvForecastConfig(latitude, longitude, pvCapacityKwp, performanceRatioPercent)
+                }
             )
         }
 
@@ -240,6 +268,8 @@ private fun ConnectionCard(
     onHomeIdChange: (String) -> Unit,
     hubLocalBaseUrl: String,
     onHubLocalBaseUrlChange: (String) -> Unit,
+    syncToken: String,
+    onSyncTokenChange: (String) -> Unit,
     onSave: () -> Unit
 ) {
     SectionCard(icon = Icons.Filled.Cloud, title = "Relé kapcsolat") {
@@ -264,6 +294,14 @@ private fun ConnectionCard(
                 label = { Text(stringResource(R.string.settings_hub_local_url)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
+            )
+            OutlinedTextField(
+                value = syncToken,
+                onValueChange = onSyncTokenChange,
+                label = { Text("Sync Token (Cloud Sync)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text("A Hub által generált token") }
             )
             Button(
                 onClick = onSave,
@@ -551,6 +589,87 @@ private fun KioskUrlCard(
                 ) {
                     Text(text = "Betöltés")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PvForecastCard(
+    latitude: String,
+    onLatitudeChange: (String) -> Unit,
+    longitude: String,
+    onLongitudeChange: (String) -> Unit,
+    pvCapacityKwp: String,
+    onPvCapacityKwpChange: (String) -> Unit,
+    performanceRatioPercent: String,
+    onPerformanceRatioPercentChange: (String) -> Unit,
+    onSave: () -> Unit
+) {
+    SectionCard(icon = Icons.Filled.WbSunny, title = "Napelem & Helyszín (Előrejelzés)") {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "A GPS koordináták és a napelem kapacitás szükséges az Energia fülön megjelenő időjárás-alapú termelési előrejelzéshez.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = latitude,
+                    onValueChange = onLatitudeChange,
+                    label = { Text("Szélesség") },
+                    placeholder = { Text("47.4979") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+                OutlinedTextField(
+                    value = longitude,
+                    onValueChange = onLongitudeChange,
+                    label = { Text("Hosszúság") },
+                    placeholder = { Text("19.0402") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = pvCapacityKwp,
+                    onValueChange = onPvCapacityKwpChange,
+                    label = { Text("PV kapacitás (kWp)") },
+                    placeholder = { Text("5.5") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+                OutlinedTextField(
+                    value = performanceRatioPercent,
+                    onValueChange = onPerformanceRatioPercentChange,
+                    label = { Text("Rendszer hatásfok (%)") },
+                    placeholder = { Text("80") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            }
+            Button(
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Save,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "Mentés")
             }
         }
     }

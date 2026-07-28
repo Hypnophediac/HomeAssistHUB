@@ -4,6 +4,9 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { registerSocketHandlers } from "./socketHandlers";
 import fusionSolarRoutes from "./fusionSolarRoutes";
+import energyRoutes from "./energyRoutes";
+import energyIngestRoutes from "./energyIngestRoutes";
+import { connectMongo } from "./db";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -22,6 +25,12 @@ app.get("/health", (_req, res) => {
 // FusionSolar inverter API routes
 app.use("/api/fusionsolar", fusionSolarRoutes);
 
+// Energy data routes (historical, from MongoDB)
+app.use("/api/energy", energyRoutes);
+
+// Energy data ingestion (Hub -> Render/MongoDB)
+app.use("/api/energy", energyIngestRoutes);
+
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
@@ -38,6 +47,7 @@ io.on("connection", (socket) => {
 
 httpServer.listen(PORT, () => {
   console.log(`smarthome-relay listening on port ${PORT}`);
+  connectMongo().catch((err) => console.error("[db] Failed to connect on startup:", err));
   startKeepAlivePing();
 });
 

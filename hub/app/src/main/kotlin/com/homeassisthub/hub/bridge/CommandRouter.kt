@@ -3,6 +3,7 @@ package com.homeassisthub.hub.bridge
 import com.homeassisthub.hub.controller.CommandResult
 import com.homeassisthub.hub.controller.DeviceController
 import com.homeassisthub.hub.controller.DeviceControllerFactory
+import com.homeassisthub.hub.data.db.InverterDailySummaryDao
 import com.homeassisthub.hub.data.db.InverterHistoryDao
 import com.homeassisthub.hub.data.db.InverterHistoryEntity
 import com.homeassisthub.hub.data.db.P1DailySummaryDao
@@ -24,7 +25,8 @@ class CommandRouter(
     private val p1DailySummaryDao: P1DailySummaryDao? = null,
     private val inverterHistoryDao: InverterHistoryDao? = null,
     private val hubConfigStore: com.homeassisthub.hub.data.HubConfigStore? = null,
-    private val kioskScraper: com.homeassisthub.hub.controller.HuaweiCloudScraper? = null
+    private val kioskScraper: com.homeassisthub.hub.controller.HuaweiCloudScraper? = null,
+    private val inverterDailySummaryDao: InverterDailySummaryDao? = null
 ) {
 
     private val controllerCache = ConcurrentHashMap<String, DeviceController>()
@@ -212,6 +214,9 @@ class CommandRouter(
                         "p1DailyImportKwh" to p1DailyImportKwh,
                         "p1DailyExportKwh" to p1DailyExportKwh,
                         "houseDailyKwh" to houseDailyKwh
+                    ),
+                    "cloudSync" to mapOf(
+                        "lastSyncTime" to (hubConfigStore?.getLastSyncTime() ?: 0L)
                     )
                 )
             )
@@ -339,6 +344,7 @@ class CommandRouter(
             val entries = mutableListOf<Map<String, Any?>>()
             var totalConsumed = 0.0
             var totalExported = 0.0
+            var totalProduced = 0.0
             for (i in 6 downTo 0) {
                 val cal = java.util.Calendar.getInstance()
                 cal.add(java.util.Calendar.DAY_OF_YEAR, -i)
@@ -352,11 +358,13 @@ class CommandRouter(
                 val exported = if (first != null && last != null) {
                     ((last.exportT1Kwh + last.exportT2Kwh) - (first.exportT1Kwh + first.exportT2Kwh)).coerceAtLeast(0.0)
                 } else 0.0
-                entries.add(mapOf("label" to dateStr.substring(5), "consumedKwh" to consumed, "exportedKwh" to exported))
+                val produced = producedKwhForDate(dateStr)
+                entries.add(mapOf("label" to dateStr.substring(5), "consumedKwh" to consumed, "exportedKwh" to exported, "producedKwh" to produced))
                 totalConsumed += consumed
                 totalExported += exported
+                totalProduced += produced ?: 0.0
             }
-            CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported))
+            CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported, "totalProducedKwh" to totalProduced))
         }
         "get_energy_monthly" -> {
             val rawDao = p1RawDao ?: error("P1 raw DAO not available")
@@ -367,6 +375,7 @@ class CommandRouter(
             val entries = mutableListOf<Map<String, Any?>>()
             var totalConsumed = 0.0
             var totalExported = 0.0
+            var totalProduced = 0.0
             for (day in 1..daysInMonth) {
                 val dateStr = String.format("%04d-%02d-%02d", currentYear, currentMonth + 1, day)
                 val (sMs, eMs) = dayRangeMillis(dateStr)
@@ -378,11 +387,13 @@ class CommandRouter(
                 val exported = if (first != null && last != null) {
                     ((last.exportT1Kwh + last.exportT2Kwh) - (first.exportT1Kwh + first.exportT2Kwh)).coerceAtLeast(0.0)
                 } else 0.0
-                entries.add(mapOf("label" to day.toString(), "consumedKwh" to consumed, "exportedKwh" to exported))
+                val produced = producedKwhForDate(dateStr)
+                entries.add(mapOf("label" to day.toString(), "consumedKwh" to consumed, "exportedKwh" to exported, "producedKwh" to produced))
                 totalConsumed += consumed
                 totalExported += exported
+                totalProduced += produced ?: 0.0
             }
-            CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported))
+            CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported, "totalProducedKwh" to totalProduced))
         }
         "get_energy_yearly" -> {
             val rawDao = p1RawDao ?: error("P1 raw DAO not available")
@@ -391,6 +402,7 @@ class CommandRouter(
             val entries = mutableListOf<Map<String, Any?>>()
             var totalConsumed = 0.0
             var totalExported = 0.0
+            var totalProduced = 0.0
             for (month in 1..12) {
                 val cal2 = java.util.Calendar.getInstance()
                 cal2.set(currentYear, month - 1, 1, 0, 0, 0)
@@ -406,14 +418,59 @@ class CommandRouter(
                 val exported = if (first != null && last != null) {
                     ((last.exportT1Kwh + last.exportT2Kwh) - (first.exportT1Kwh + first.exportT2Kwh)).coerceAtLeast(0.0)
                 } else 0.0
+                val monthStartStr = String.format("%04d-%02d-01", currentYear, month)
+                val monthEndCal = java.util.Calendar.getInstance().apply {
+                    set(currentYear, month - 1, 1)
+                    set(java.util.Calendar.DAY_OF_MONTH, getActualMaximum(java.util.Calendar.DAY_OF_MONTH))
+                }
+                val monthEndStr = dateStringFromCal(monthEndCal)
+                val monthlyProducedRows = inverterDailySummaryDao?.getRange(monthStartStr, monthEndStr) ?: emptyList()
+                var produced: Double? = monthlyProducedRows.sumOf { it.producedKwh }
+                if (todayDateString() in monthStartStr..monthEndStr) {
+                    produced = (produced ?: 0.0) + (producedKwhForDate(todayDateString()) ?: 0.0)
+                }
+                if (monthlyProducedRows.isEmpty() && produced == 0.0) produced = null
                 val monthLabel = java.text.SimpleDateFormat("MMM", java.util.Locale.US).format(
                     java.util.Date(currentYear - 1900, month - 1, 1)
                 )
-                entries.add(mapOf("label" to monthLabel, "consumedKwh" to consumed, "exportedKwh" to exported))
+                entries.add(mapOf("label" to monthLabel, "consumedKwh" to consumed, "exportedKwh" to exported, "producedKwh" to produced))
                 totalConsumed += consumed
                 totalExported += exported
+                totalProduced += produced ?: 0.0
             }
-            CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported))
+            CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported, "totalProducedKwh" to totalProduced))
+        }
+        "get_energy_range" -> {
+            val rawDao = p1RawDao ?: error("P1 raw DAO not available")
+            val startDate = params["startDate"] ?: error("Missing startDate param")
+            val endDate = params["endDate"] ?: error("Missing endDate param")
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            val startCal = java.util.Calendar.getInstance().apply { time = sdf.parse(startDate) ?: java.util.Date() }
+            val endCal = java.util.Calendar.getInstance().apply { time = sdf.parse(endDate) ?: java.util.Date() }
+            val entries = mutableListOf<Map<String, Any?>>()
+            var totalConsumed = 0.0
+            var totalExported = 0.0
+            var totalProduced = 0.0
+            val cursor = startCal.clone() as java.util.Calendar
+            while (!cursor.after(endCal)) {
+                val dateStr = dateStringFromCal(cursor)
+                val (sMs, eMs) = dayRangeMillis(dateStr)
+                val first = rawDao.getFirstInRange(sMs, eMs)
+                val last = rawDao.getLastInRange(sMs, eMs)
+                val consumed = if (first != null && last != null) {
+                    ((last.importT1Kwh + last.importT2Kwh) - (first.importT1Kwh + first.importT2Kwh)).coerceAtLeast(0.0)
+                } else 0.0
+                val exported = if (first != null && last != null) {
+                    ((last.exportT1Kwh + last.exportT2Kwh) - (first.exportT1Kwh + first.exportT2Kwh)).coerceAtLeast(0.0)
+                } else 0.0
+                val produced = producedKwhForDate(dateStr)
+                entries.add(mapOf("label" to dateStr.substring(5), "consumedKwh" to consumed, "exportedKwh" to exported, "producedKwh" to produced))
+                totalConsumed += consumed
+                totalExported += exported
+                totalProduced += produced ?: 0.0
+                cursor.add(java.util.Calendar.DAY_OF_YEAR, 1)
+            }
+            CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported, "totalProducedKwh" to totalProduced))
         }
         else -> CommandResult.Failure("Unsupported hub action '$action'")
     }
@@ -487,6 +544,20 @@ class CommandRouter(
     private fun todayDateString(): String {
         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
         return sdf.format(java.util.Date())
+    }
+
+    /** Resolves solar production (kWh) for a given date: the finalized
+     *  midnight-rollover summary for past days, or the live (not-yet-final)
+     *  Kiosk counter for today. Returns null if there's no data at all
+     *  (e.g. the Hub was offline the whole day) — callers should treat this
+     *  as "no data", not zero, so it doesn't skew period averages/totals. */
+    private suspend fun producedKwhForDate(dateStr: String): Double? {
+        if (dateStr == todayDateString()) {
+            return if (com.homeassisthub.hub.controller.InverterLiveData.isFresh()) {
+                com.homeassisthub.hub.controller.InverterLiveData.dailyEnergyKwh
+            } else null
+        }
+        return inverterDailySummaryDao?.getByDate(dateStr)?.producedKwh
     }
 
     private fun dateStringFromCal(cal: java.util.Calendar): String {

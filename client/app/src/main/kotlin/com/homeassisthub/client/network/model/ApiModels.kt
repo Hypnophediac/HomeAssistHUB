@@ -105,21 +105,24 @@ data class EnergyDailyResponseDto(
     val avgL2A: Double = 0.0,
     val avgL3A: Double = 0.0,
     val avgPowerFactor: Double = 0.0,
-    val avgFrequencyHz: Double = 50.0
+    val avgFrequencyHz: Double = 50.0,
+    val totalProducedKwh: Double = 0.0
 )
 
 @JsonClass(generateAdapter = true)
 data class EnergyPeriodEntryDto(
     val label: String,
     val consumedKwh: Double,
-    val exportedKwh: Double
+    val exportedKwh: Double,
+    val producedKwh: Double? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class EnergyPeriodResponseDto(
     val entries: List<EnergyPeriodEntryDto>,
     val totalConsumedKwh: Double,
-    val totalExportedKwh: Double
+    val totalExportedKwh: Double,
+    val totalProducedKwh: Double = 0.0
 )
 
 @JsonClass(generateAdapter = true)
@@ -128,4 +131,25 @@ data class DailySummaryDto(
     val p1DailyImportKwh: Double = 0.0,
     val p1DailyExportKwh: Double = 0.0,
     val houseDailyKwh: Double = 0.0
+)
+
+/** Mirrors Open-Meteo's /v1/forecast JSON shape (only the fields we need). */
+@JsonClass(generateAdapter = true)
+data class OpenMeteoHourlyDto(
+    val time: List<String> = emptyList(),
+    val shortwave_radiation: List<Double> = emptyList(),
+    val temperature_2m: List<Double> = emptyList(),
+    val cloudcover: List<Double> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class OpenMeteoDailyDto(
+    val sunrise: List<String> = emptyList(),
+    val sunset: List<String> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class OpenMeteoResponseDto(
+    val hourly: OpenMeteoHourlyDto = OpenMeteoHourlyDto(),
+    val daily: OpenMeteoDailyDto = OpenMeteoDailyDto()
 )

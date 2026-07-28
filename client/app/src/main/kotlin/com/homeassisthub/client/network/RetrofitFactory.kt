@@ -27,4 +27,14 @@ object RetrofitFactory {
             .build()
             .create(HubApiService::class.java)
     }
+
+    fun createRender(baseUrl: String): RenderApiService {
+        val normalizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+        return Retrofit.Builder()
+            .baseUrl(normalizedBaseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(RenderApiService::class.java)
+    }
 }

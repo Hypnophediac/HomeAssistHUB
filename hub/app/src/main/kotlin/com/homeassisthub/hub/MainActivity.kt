@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.homeassisthub.hub.security.DeviceCredential
 import com.homeassisthub.hub.security.SecureCredentialStore
+import com.homeassisthub.hub.data.HubConfigStore
 import com.homeassisthub.hub.service.HubForegroundService
 
 class MainActivity : ComponentActivity() {
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     HubControlScreen(
                         credentialStore = credentialStore,
+                        hubConfigStore = HubConfigStore(this),
                         onStart = { ContextCompat.startForegroundService(this, HubForegroundService.startIntent(this)) },
                         onStop = { startService(HubForegroundService.stopIntent(this)) },
                         onRestartService = {
@@ -79,6 +81,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun HubControlScreen(
     credentialStore: SecureCredentialStore,
+    hubConfigStore: HubConfigStore,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onRestartService: () -> Unit
@@ -177,6 +180,53 @@ private fun HubControlScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Cloud Sync",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        val hubConfig = hubConfigStore.getConfig()
+        Text(
+            text = "Relé URL: ${hubConfig?.relayUrl ?: "nincs beállítva"}",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = "Home ID: ${hubConfig?.homeId ?: "nincs beállítva"}",
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        var syncToken by remember { mutableStateOf(hubConfig?.syncToken ?: "") }
+
+        if (syncToken.isNotBlank()) {
+            Text(
+                text = "Sync Token:",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = syncToken,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "Másold be ezt a tokent a Kliens Beállításokba.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
+
+        Button(onClick = {
+            syncToken = hubConfigStore.generateSyncToken()
+            savedMessage = "Új sync token generálva!"
+        }) {
+            Text(if (syncToken.isBlank()) "Sync token generálása" else "Új token generálása")
         }
     }
 }

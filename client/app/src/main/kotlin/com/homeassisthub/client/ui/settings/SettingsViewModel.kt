@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeassisthub.client.data.ClientConfig
 import com.homeassisthub.client.data.ClientConfigStore
+import com.homeassisthub.client.data.PvForecastConfig
 import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
@@ -25,6 +26,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         configStore.getConfig() ?: ClientConfig(relayUrl = "", homeId = "", hubLocalBaseUrl = "")
     )
 
+    val pvForecastConfig = mutableStateOf(configStore.getPvForecastConfig())
+
     private val _discovered = MutableStateFlow<List<DiscoveredDeviceDto>>(emptyList())
     val discovered: StateFlow<List<DiscoveredDeviceDto>> = _discovered.asStateFlow()
 
@@ -40,14 +43,27 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         if (config.value.relayUrl.isNotBlank() && config.value.homeId.isNotBlank()) loadSavedDevices()
     }
 
-    fun saveConfig(relayUrl: String, homeId: String, hubLocalBaseUrl: String) {
-        val newConfig = ClientConfig(relayUrl, homeId, hubLocalBaseUrl)
+    fun saveConfig(relayUrl: String, homeId: String, hubLocalBaseUrl: String, syncToken: String = "") {
+        val currentSyncToken = if (syncToken.isNotBlank()) syncToken else config.value.syncToken
+        val newConfig = ClientConfig(relayUrl, homeId, hubLocalBaseUrl, currentSyncToken)
         configStore.saveConfig(newConfig)
         config.value = newConfig
         socketManager?.disconnect()
         socketManager = null
         _statusMessage.value = "Beállítások elmentve."
         loadSavedDevices()
+    }
+
+    fun savePvForecastConfig(latitude: String, longitude: String, pvCapacityKwp: String, performanceRatioPercent: String) {
+        val newConfig = PvForecastConfig(
+            latitude = latitude.replace(",", ".").toDoubleOrNull(),
+            longitude = longitude.replace(",", ".").toDoubleOrNull(),
+            pvCapacityKwp = pvCapacityKwp.replace(",", ".").toDoubleOrNull(),
+            performanceRatio = (performanceRatioPercent.replace(",", ".").toDoubleOrNull() ?: 80.0) / 100.0
+        )
+        configStore.savePvForecastConfig(newConfig)
+        pvForecastConfig.value = newConfig
+        _statusMessage.value = "Napelem beállítások elmentve."
     }
 
     /** All Hub interactions go through the relay ("hub" pseudo-device commands), so this works over mobile data too. */

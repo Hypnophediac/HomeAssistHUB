@@ -1,5 +1,7 @@
 package com.homeassisthub.client.ui.energy
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,18 +17,24 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SolarPower
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,14 +47,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homeassisthub.client.network.model.EnergyDailyResponseDto
 import com.homeassisthub.client.network.model.EnergyPeriodResponseDto
+import com.homeassisthub.client.network.model.P1ReadingDto
+import com.homeassisthub.client.ui.components.FreshnessBadge
+import com.homeassisthub.client.ui.components.CloudSyncBadge
 
 @Composable
 fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
@@ -54,11 +67,18 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
     val weeklyData by viewModel.weeklyData.collectAsState()
     val monthlyData by viewModel.monthlyData.collectAsState()
     val yearlyData by viewModel.yearlyData.collectAsState()
+    val rangeData by viewModel.rangeData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
+    val liveReadings by viewModel.liveReadings.collectAsState()
+    val liveDailySummary by viewModel.liveDailySummary.collectAsState()
+    val pvForecast by viewModel.pvForecast.collectAsState()
+    val cloudSyncLastTime by viewModel.cloudSyncLastTime.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
-    val tabTitles = listOf("Napi", "Heti", "Havi", "Éves")
+    val tabTitles = listOf("Napi", "Heti", "Havi", "Éves", "Egyedi")
+    var showDateRangePicker by remember { mutableStateOf(false) }
+    var selectedRangeLabel by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -92,12 +112,28 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
             }
         }
 
+        if (liveReadings.isNotEmpty()) {
+            item {
+                LiveFlowCards(latest = liveReadings.last(), cloudSyncLastTime = cloudSyncLastTime)
+            }
+        }
+
+        item {
+            ForecastCard(
+                forecast = pvForecast,
+                actualTodayKwh = liveDailySummary?.inverterDailyKwh
+            )
+        }
+
         item {
             TabRow(selectedTabIndex = selectedTab) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        onClick = {
+                            selectedTab = index
+                            if (index == 4) showDateRangePicker = true
+                        },
                         text = { Text(title) }
                     )
                 }
@@ -158,9 +194,81 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
                     }
                 } ?: item { LoadingPlaceholder() }
             }
+            4 -> {
+                item {
+                    OutlinedButton(
+                        onClick = { showDateRangePicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Filled.DateRange, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = selectedRangeLabel ?: "Válassz dátumtartományt")
+                    }
+                }
+                rangeData?.let { data ->
+                    item { PeriodSummaryCards(data = data) }
+                    item {
+                        EnergyColumnChart(
+                            labels = data.entries.map { it.label },
+                            consumedValues = data.entries.map { it.consumedKwh },
+                            exportedValues = data.entries.map { it.exportedKwh }
+                        )
+                    }
+                } ?: item {
+                    Text(
+                        text = "Válassz egy dátumtartományt a fenti gombbal.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }
+    }
+
+    if (showDateRangePicker) {
+        EnergyDateRangePickerDialog(
+            onDismiss = { showDateRangePicker = false },
+            onConfirm = { startDate, endDate, label ->
+                showDateRangePicker = false
+                selectedRangeLabel = label
+                viewModel.fetchRange(startDate, endDate)
+            }
+        )
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun EnergyDateRangePickerDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (startDate: String, endDate: String, label: String) -> Unit
+) {
+    val state = androidx.compose.material3.rememberDateRangePickerState()
+    androidx.compose.material3.DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                val start = state.selectedStartDateMillis
+                val end = state.selectedEndDateMillis
+                if (start != null && end != null) {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    val startStr = sdf.format(java.util.Date(start))
+                    val endStr = sdf.format(java.util.Date(end))
+                    onConfirm(startStr, endStr, "$startStr – $endStr")
+                }
+            }) {
+                Text("Alkalmaz")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Mégse") }
+        }
+    ) {
+        androidx.compose.material3.DateRangePicker(state = state, modifier = Modifier.weight(1f))
     }
 }
 
@@ -214,6 +322,178 @@ private fun EnergyHeader(
                         contentDescription = "Frissítés"
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveFlowCards(latest: P1ReadingDto, cloudSyncLastTime: Long = 0L) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Élő Adatok",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                FreshnessBadge(timestampMs = latest.timestamp)
+                CloudSyncBadge(lastSyncTimeMs = cloudSyncLastTime)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            val houseW = maxOf(0.0, latest.realConsumptionW).toInt()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FlowCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Napelem Termelés",
+                    value = if (latest.inverterPowerW > 0.0) "${latest.inverterPowerW.toInt()} W" else "— W",
+                    icon = Icons.Filled.SolarPower,
+                    color = Color(0xFF10B981)
+                )
+                FlowCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Ház Fogyasztás",
+                    value = if (latest.inverterPowerW > 0.0 || latest.realConsumptionW > 0.0) "$houseW W" else "— W",
+                    icon = Icons.Filled.Bolt,
+                    color = Color(0xFF8B5CF6)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FlowCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Import (Vételezés)",
+                    value = "${latest.powerImportW.toInt()} W",
+                    icon = Icons.Filled.Bolt,
+                    color = Color(0xFFF59E0B)
+                )
+                FlowCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Export (Betáplálás)",
+                    value = "${latest.powerExportW.toInt()} W",
+                    icon = Icons.Filled.SolarPower,
+                    color = Color(0xFF3B82F6)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FlowCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ForecastCard(
+    forecast: com.homeassisthub.client.data.PvForecastResult?,
+    actualTodayKwh: Double?
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.WbSunny,
+                    contentDescription = null,
+                    tint = Color(0xFFF59E0B),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Termelési Előrejelzés",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            if (forecast == null) {
+                Text(
+                    text = "Állítsd be a helyszínt és a napelem kapacitást a Beállításokban az időjárás-alapú előrejelzéshez.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FlowCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Mára várható",
+                        value = "%.1f kWh".format(forecast.estimatedTodayKwh),
+                        icon = Icons.Filled.WbSunny,
+                        color = Color(0xFFF59E0B)
+                    )
+                    FlowCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Eddig termelt",
+                        value = actualTodayKwh?.let { "%.1f kWh".format(it) } ?: "— kWh",
+                        icon = Icons.Filled.SolarPower,
+                        color = Color(0xFF10B981)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                val tempText = forecast.currentTemperatureC?.let { "%.0f°C".format(it) } ?: "—"
+                val cloudText = forecast.currentCloudCoverPercent?.let { "${it.toInt()}% felhőzet" } ?: ""
+                Text(
+                    text = "Jelenleg: $tempText, $cloudText",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -458,6 +738,31 @@ private fun PeriodSummaryCards(data: EnergyPeriodResponseDto) {
             icon = Icons.Filled.SolarPower
         )
     }
+    if (data.totalProducedKwh > 0.0) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SummaryCard(
+                modifier = Modifier.weight(1f),
+                title = "Összes Termelés",
+                value = "%.2f kWh".format(data.totalProducedKwh),
+                color = Color(0xFF10B981),
+                icon = Icons.Filled.WbSunny
+            )
+            val selfConsumptionRatio = if (data.totalProducedKwh > 0.0) {
+                ((data.totalProducedKwh - data.totalExportedKwh).coerceAtLeast(0.0) / data.totalProducedKwh) * 100.0
+            } else 0.0
+            SummaryCard(
+                modifier = Modifier.weight(1f),
+                title = "Önfogyasztási arány",
+                value = "%.1f%%".format(selfConsumptionRatio),
+                color = Color(0xFF8B5CF6),
+                icon = Icons.Filled.Bolt
+            )
+        }
+    }
 }
 
 @Composable
@@ -533,11 +838,12 @@ private fun LiveStatCard(
 
 private val ConsumedBarColor = Color(0xFFE65100)
 private val ExportedBarColor = Color(0xFF2E7D32)
+private const val MIN_CHART_SCALE = 1.0f
+private const val MAX_CHART_SCALE = 10.0f
 
 /**
- * Custom Canvas-based grouped bar chart. Unlike Vico's columnChart, this
- * always renders ALL entries within the available width (no hidden
- * horizontal scroll that silently clips data off-screen).
+ * Interactive wrapper around [EnergyColumnChart]: adds a fullscreen button
+ * that opens the same chart in an enlarged Dialog with the same gestures.
  */
 @Composable
 private fun EnergyColumnChart(
@@ -549,6 +855,84 @@ private fun EnergyColumnChart(
         LoadingPlaceholder()
         return
     }
+
+    var showFullscreen by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        ZoomableEnergyColumnChart(
+            labels = labels,
+            consumedValues = consumedValues,
+            exportedValues = exportedValues,
+            height = 240.dp
+        )
+        FilledIconButton(
+            onClick = { showFullscreen = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp)
+                .size(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Fullscreen,
+                contentDescription = "Teljes képernyő",
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+
+    if (showFullscreen) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showFullscreen = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ZoomableEnergyColumnChart(
+                        labels = labels,
+                        consumedValues = consumedValues,
+                        exportedValues = exportedValues,
+                        height = 480.dp,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    )
+                    FilledIconButton(
+                        onClick = { showFullscreen = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FullscreenExit,
+                            contentDescription = "Bezárás"
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Custom Canvas-based grouped bar chart with pinch-to-zoom (horizontal,
+ * clamped 1x-10x), drag-to-pan, and double-tap-to-reset gestures. Unlike
+ * Vico's columnChart, this always renders using the full available width
+ * as the 1x baseline (no hidden horizontal scroll that silently clips data
+ * off-screen at rest).
+ */
+@Composable
+private fun ZoomableEnergyColumnChart(
+    labels: List<String>,
+    consumedValues: List<Double>,
+    exportedValues: List<Double>,
+    height: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    var scale by remember(labels) { mutableStateOf(1f) }
+    var offsetX by remember(labels) { mutableStateOf(0f) }
 
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
@@ -566,17 +950,35 @@ private fun EnergyColumnChart(
     val niceMax = maxOf(maxDataValue * 1.15f, 0.1f)
 
     androidx.compose.foundation.Canvas(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(240.dp)
+            .height(height)
             .padding(top = 8.dp)
+            .pointerInput(labels) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val newScale = (scale * zoom).coerceIn(MIN_CHART_SCALE, MAX_CHART_SCALE)
+                    scale = newScale
+                    offsetX += pan.x
+                }
+            }
+            .pointerInput(labels) {
+                detectTapGestures(onDoubleTap = {
+                    scale = MIN_CHART_SCALE
+                    offsetX = 0f
+                })
+            }
     ) {
         val canvasW = size.width
         val labelW = yLabelWidthPx
         val xLabelH = xLabelHeightPx
         val chartW = canvasW - labelW
         val chartH = size.height - xLabelH
-        val barGroupW = if (consumedValues.isNotEmpty()) chartW / consumedValues.size else 0f
+
+        val contentW = chartW * scale
+        val maxOffset = (contentW - chartW).coerceAtLeast(0f)
+        offsetX = offsetX.coerceIn(-maxOffset, 0f)
+
+        val barGroupW = if (consumedValues.isNotEmpty()) contentW / consumedValues.size else 0f
         val barW = barGroupW * 0.38f
 
         val gridSteps = 4
@@ -606,7 +1008,8 @@ private fun EnergyColumnChart(
         drawLine(color = axisColor, start = Offset(labelW, 0f), end = Offset(labelW, chartH), strokeWidth = 1.5f)
         drawLine(color = axisColor, start = Offset(labelW, chartH), end = Offset(canvasW, chartH), strokeWidth = 1.5f)
 
-        val labelEvery = if (labels.size <= 12) 1 else kotlin.math.max(1, labels.size / 8)
+        val visibleGroupCount = if (barGroupW > 0f) (chartW / barGroupW).toInt() + 2 else labels.size
+        val labelEvery = if (visibleGroupCount <= 12) 1 else kotlin.math.max(1, visibleGroupCount / 8)
         val xPaint = android.graphics.Paint().apply {
             color = labelColor.toArgb()
             textSize = axisFontSizePx
@@ -614,29 +1017,33 @@ private fun EnergyColumnChart(
             isAntiAlias = true
         }
 
-        consumedValues.forEachIndexed { index, consumed ->
-            val groupX = labelW + index * barGroupW
-            val consumedH = (consumed / niceMax * chartH).toFloat()
-            drawRect(
-                color = ConsumedBarColor,
-                topLeft = Offset(groupX + barGroupW * 0.08f, chartH - consumedH),
-                size = Size(barW, consumedH)
-            )
-            val exported = exportedValues.getOrElse(index) { 0.0 }
-            val exportedH = (exported / niceMax * chartH).toFloat()
-            drawRect(
-                color = ExportedBarColor,
-                topLeft = Offset(groupX + barGroupW * 0.54f, chartH - exportedH),
-                size = Size(barW, exportedH)
-            )
+        clipRect(left = labelW, top = 0f, right = canvasW, bottom = size.height) {
+            consumedValues.forEachIndexed { index, consumed ->
+                val groupX = labelW + offsetX + index * barGroupW
+                if (groupX + barGroupW < labelW || groupX > canvasW) return@forEachIndexed
 
-            if (index % labelEvery == 0) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    labels.getOrElse(index) { "" },
-                    groupX + barGroupW / 2f,
-                    chartH + xLabelH - yLabelPaddingPx,
-                    xPaint
+                val consumedH = (consumed / niceMax * chartH).toFloat()
+                drawRect(
+                    color = ConsumedBarColor,
+                    topLeft = Offset(groupX + barGroupW * 0.08f, chartH - consumedH),
+                    size = Size(barW, consumedH)
                 )
+                val exported = exportedValues.getOrElse(index) { 0.0 }
+                val exportedH = (exported / niceMax * chartH).toFloat()
+                drawRect(
+                    color = ExportedBarColor,
+                    topLeft = Offset(groupX + barGroupW * 0.54f, chartH - exportedH),
+                    size = Size(barW, exportedH)
+                )
+
+                if (index % labelEvery == 0) {
+                    drawContext.canvas.nativeCanvas.drawText(
+                        labels.getOrElse(index) { "" },
+                        groupX + barGroupW / 2f,
+                        chartH + xLabelH - yLabelPaddingPx,
+                        xPaint
+                    )
+                }
             }
         }
     }

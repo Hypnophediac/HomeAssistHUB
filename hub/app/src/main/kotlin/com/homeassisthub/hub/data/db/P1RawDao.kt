@@ -26,6 +26,9 @@ interface P1RawDao {
     @Query("SELECT * FROM p1_raw_data WHERE timestamp >= :startMs AND timestamp < :endMs ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLastInRange(startMs: Long, endMs: Long): P1RawData?
 
+    @Query("SELECT * FROM p1_raw_data WHERE timestamp > :sinceMs ORDER BY timestamp ASC LIMIT :limit")
+    suspend fun getRangeSince(sinceMs: Long, limit: Int = 500): List<P1RawData>
+
     @Query("DELETE FROM p1_raw_data WHERE timestamp < :olderThanEpochMillis")
     suspend fun deleteOlderThan(olderThanEpochMillis: Long)
 }

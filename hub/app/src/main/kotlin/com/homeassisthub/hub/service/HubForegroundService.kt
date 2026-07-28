@@ -25,6 +25,9 @@ import com.homeassisthub.hub.data.HubConfigStore
 import com.homeassisthub.hub.data.db.AppDatabase
 import com.homeassisthub.hub.data.db.P1DataEntity
 import com.homeassisthub.hub.data.db.P1DailySummary
+import com.homeassisthub.hub.data.db.InverterDailySummary
+import com.homeassisthub.hub.controller.InverterLiveData
+import com.homeassisthub.hub.sync.CloudSyncManager
 import com.homeassisthub.hub.discovery.DiscoveryManager
 import com.homeassisthub.hub.security.DeviceCredential
 import com.homeassisthub.hub.security.SecureCredentialStore
@@ -58,11 +61,13 @@ class HubForegroundService : Service() {
     private val p1RawDao by lazy { database.p1RawDao() }
     private val p1DailySummaryDao by lazy { database.p1DailySummaryDao() }
     private val inverterHistoryDao by lazy { database.inverterHistoryDao() }
+    private val inverterDailySummaryDao by lazy { database.inverterDailySummaryDao() }
     private val controllerFactory by lazy { DeviceControllerFactory(p1Dao, p1RawDao, serviceScope, applicationContext) }
     private val discoveryManager by lazy { DiscoveryManager(applicationContext) }
     private val kioskScraper by lazy { HuaweiCloudScraper(serviceScope) }
-    private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory, discoveryManager, p1Dao, p1RawDao, p1DailySummaryDao, inverterHistoryDao, hubConfigStore, kioskScraper) }
+    private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory, discoveryManager, p1Dao, p1RawDao, p1DailySummaryDao, inverterHistoryDao, hubConfigStore, kioskScraper, inverterDailySummaryDao) }
     private val apiServer by lazy { HubApiServer(discoveryManager, credentialStore, p1Dao, p1RawDao, p1DailySummaryDao) }
+    private val cloudSyncManager by lazy { CloudSyncManager(hubConfigStore, p1RawDao, inverterHistoryDao, p1DailySummaryDao, inverterDailySummaryDao, serviceScope) }
 
     private var hubSocketClient: HubSocketClient? = null
     private val p1Pollers = mutableListOf<P1MeterController>()
@@ -87,6 +92,8 @@ class HubForegroundService : Service() {
                 startInverterPollers()
                 startKioskScraper()
                 startDailySummaryWorker()
+                startInverterDailyCacheWorker()
+                startCloudSync()
                 connectToRelay()
             }
         }
@@ -332,6 +339,8 @@ class HubForegroundService : Service() {
         serviceScope.launch(Dispatchers.IO) {
             // Run immediately to backfill any missing summaries
             computeAndStoreDailySummary(yesterdayDate())
+            computeAndStoreInverterDailySummary(yesterdayDate())
+            cloudSyncManager.pushDailySummary(yesterdayDate())
             cleanupOldRawData()
 
             while (isActive) {
@@ -341,8 +350,46 @@ class HubForegroundService : Service() {
                 delay(waitMs)
                 // Compute yesterday's summary and clean up
                 computeAndStoreDailySummary(yesterdayDate())
+                computeAndStoreInverterDailySummary(yesterdayDate())
+                cloudSyncManager.pushDailySummary(yesterdayDate())
                 cleanupOldRawData()
             }
+        }
+    }
+
+    /** Every 5 minutes, snapshots InverterLiveData.dailyEnergyKwh (if fresh)
+     *  into HubConfigStore, tagged with today's date. This is the "last
+     *  known value" the midnight rollover uses to self-heal if it couldn't
+     *  run exactly at midnight (e.g. the Hub was restarting or briefly
+     *  offline right around midnight). */
+    private fun startInverterDailyCacheWorker() {
+        serviceScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                if (InverterLiveData.isFresh()) {
+                    hubConfigStore.saveLastKnownInverterDaily(todayDate(), InverterLiveData.dailyEnergyKwh)
+                }
+                delay(5 * 60 * 1000L)
+            }
+        }
+    }
+
+    /** Finalizes yesterday's solar production total from the last cached
+     *  Kiosk snapshot taken on that date. If the Hub was fully offline for
+     *  the entire day, there's no cached snapshot to recover from and the
+     *  day is left without a summary row (surfaced as "no data" to the UI,
+     *  rather than a misleading 0 kWh). */
+    private suspend fun computeAndStoreInverterDailySummary(dateStr: String) {
+        try {
+            if (inverterDailySummaryDao.getByDate(dateStr) != null) return // already finalized
+            val (lastDate, lastKwh) = hubConfigStore.getLastKnownInverterDaily() ?: return
+            if (lastDate != dateStr) {
+                Log.w(TAG, "No cached inverter snapshot for $dateStr (last cached date was $lastDate) — leaving as no-data")
+                return
+            }
+            inverterDailySummaryDao.upsert(InverterDailySummary(date = dateStr, producedKwh = lastKwh))
+            Log.i(TAG, "Inverter daily summary for $dateStr: produced=${"%.3f".format(lastKwh)} kWh")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to compute inverter daily summary for $dateStr", e)
         }
     }
 
@@ -435,6 +482,12 @@ class HubForegroundService : Service() {
         cal.set(java.util.Calendar.SECOND, 0)
         cal.set(java.util.Calendar.MILLISECOND, 0)
         return cal.timeInMillis
+    }
+
+    /** Starts the CloudSyncManager which periodically uploads raw readings
+     *  and daily summaries to the Render relay's MongoDB backend. */
+    private fun startCloudSync() {
+        cloudSyncManager.start()
     }
 
     /** Connects the Socket.IO client to the cloud relay, if configured. */
