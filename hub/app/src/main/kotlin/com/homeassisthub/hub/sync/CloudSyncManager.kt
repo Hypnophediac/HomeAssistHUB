@@ -6,6 +6,7 @@ import com.homeassisthub.hub.data.db.InverterDailySummaryDao
 import com.homeassisthub.hub.data.db.InverterHistoryDao
 import com.homeassisthub.hub.data.db.P1DailySummaryDao
 import com.homeassisthub.hub.data.db.P1RawDao
+import com.homeassisthub.hub.controller.InverterLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -53,6 +54,7 @@ class CloudSyncManager(
             while (isActive) {
                 try {
                     syncBatch()
+                    pushLiveInverterDaily()
                 } catch (e: Exception) {
                     Log.w(TAG, "Sync cycle failed: ${e.message}")
                 }
@@ -65,6 +67,23 @@ class CloudSyncManager(
      *  Used at startup to backfill summaries computed before cloud sync was
      *  configured or while it was unreachable. The relay upserts, so
      *  re-pushing is idempotent. */
+    /** Pushes today's live inverter daily yield (from Kiosk API) to the relay
+     *  so the client can display producedKwh for the current day, not just
+     *  finalized days. Called every sync cycle. */
+    private suspend fun pushLiveInverterDaily() {
+        try {
+            val config = configStore.getConfig() ?: return
+            if (config.syncToken.isBlank()) return
+            if (!InverterLiveData.isFresh()) return
+            val today = todayDateString()
+            val dailyKwh = InverterLiveData.dailyEnergyKwh
+            if (dailyKwh <= 0.0) return
+            pushInverterDailySummary(today, dailyKwh)
+        } catch (e: Exception) {
+            Log.w(TAG, "Live inverter daily push failed: ${e.message}")
+        }
+    }
+
     fun pushAllDailySummaries() {
         scope.launch(Dispatchers.IO) {
             try {
@@ -258,10 +277,16 @@ class CloudSyncManager(
         val config = configStore.getConfig() ?: return
         if (config.syncToken.isBlank()) return
         val summary = inverterDailySummaryDao.getByDate(dateStr) ?: return
+        pushInverterDailySummary(dateStr, summary.producedKwh)
+    }
+
+    private suspend fun pushInverterDailySummary(dateStr: String, producedKwh: Double) {
+        val config = configStore.getConfig() ?: return
+        if (config.syncToken.isBlank()) return
 
         val invSummaryJson = JSONObject().apply {
-            put("date", summary.date)
-            put("producedKwh", summary.producedKwh)
+            put("date", dateStr)
+            put("producedKwh", producedKwh)
         }
 
         val body = JSONObject().apply {
@@ -289,5 +314,11 @@ class CloudSyncManager(
         private const val TAG = "CloudSyncManager"
         private const val SYNC_INTERVAL_MS = 2 * 60 * 1000L // 2 minutes
         private const val BATCH_LIMIT = 500
+
+        private fun todayDateString(): String {
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            sdf.timeZone = java.util.TimeZone.getDefault()
+            return sdf.format(java.util.Date())
+        }
     }
 }
