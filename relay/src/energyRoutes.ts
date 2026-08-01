@@ -179,7 +179,7 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
     // Use P1DailySummary if available, otherwise compute from raw readings
     const rawStats = computeDailyStatsFromRaw(rawReadings, totalConsumed, totalExported, producedKwh);
 
-    const dailyStats = p1Daily || rawStats || {};
+    const dailyStats: any = p1Daily || rawStats || {};
 
     res.json({
       hourly,
