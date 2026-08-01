@@ -10,13 +10,98 @@ import {
 
 const router = Router();
 
+const BUDAPEST_TZ = "Europe/Budapest";
+
+function todayDateString(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUDAPEST_TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+}
+
+function dateStringFromCal(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUDAPEST_TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(d);
+}
+
+function dateRangeMillis(dateStr: string): [number, number] {
+  // Determine Budapest offset (DST-aware) by checking what hour
+  // Budapest shows at noon UTC for the given date.
+  const noonUtc = new Date(dateStr + "T12:00:00Z");
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUDAPEST_TZ,
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(noonUtc);
+  const bHour = parseInt(parts.find(p => p.type === "hour")?.value || "14");
+  const bMin = parseInt(parts.find(p => p.type === "minute")?.value || "0");
+  const offsetMin = (bHour * 60 + bMin) - 12 * 60;
+
+  const midnightUtc = new Date(dateStr + "T00:00:00Z").getTime();
+  const startMs = midnightUtc - offsetMin * 60 * 1000;
+  const endMs = startMs + 24 * 60 * 60 * 1000;
+  return [startMs, endMs];
+}
+
+function budapestHour(ts: number): number {
+  return parseInt(new Intl.DateTimeFormat("en-US", {
+    timeZone: BUDAPEST_TZ,
+    hour: "2-digit", hour12: false,
+  }).format(new Date(ts)));
+}
+
+function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalExported: number, totalProduced: number) {
+  if (readings.length === 0) return null;
+  const powers = readings.map(r => r.currentPowerW || 0);
+  const imports = readings.map(r => r.powerImportW || 0);
+  const exports = readings.map(r => r.powerExportW || 0);
+  const minPowerW = Math.min(...powers);
+  const maxPowerW = Math.max(...powers);
+  const avgPowerW = powers.reduce((s, v) => s + v, 0) / powers.length;
+  const maxImportW = Math.max(...imports);
+  const maxExportW = Math.max(...exports);
+
+  // Tariff deltas from first to last reading
+  const first = readings[0];
+  const last = readings[readings.length - 1];
+  const importT1Kwh = Math.max(0, (last.importT1Kwh || 0) - (first.importT1Kwh || 0));
+  const importT2Kwh = Math.max(0, (last.importT2Kwh || 0) - (first.importT2Kwh || 0));
+  const exportT1Kwh = Math.max(0, (last.exportT1Kwh || 0) - (first.exportT1Kwh || 0));
+  const exportT2Kwh = Math.max(0, (last.exportT2Kwh || 0) - (first.exportT2Kwh || 0));
+
+  const netEnergyKwh = totalConsumed - totalExported;
+
+  const selfConsumptionRatio = totalProduced > 0
+    ? Math.max(0, Math.min(1, (totalProduced - totalExported) / totalProduced))
+    : 0;
+
+  // Averages for voltage, current, power factor, frequency
+  const avg = (arr: number[]) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+  const avgL1V = avg(readings.map(r => r.l1V || 0));
+  const avgL2V = avg(readings.map(r => r.l2V || 0));
+  const avgL3V = avg(readings.map(r => r.l3V || 0));
+  const avgL1A = avg(readings.map(r => r.l1A || 0));
+  const avgL2A = avg(readings.map(r => r.l2A || 0));
+  const avgL3A = avg(readings.map(r => r.l3A || 0));
+  const avgPowerFactor = avg(readings.map(r => r.powerFactor || 0));
+  const avgFrequencyHz = avg(readings.map(r => r.frequencyHz || 50));
+
+  return {
+    minPowerW, maxPowerW, avgPowerW, maxImportW, maxExportW,
+    importT1Kwh, importT2Kwh, exportT1Kwh, exportT2Kwh,
+    netEnergyKwh, selfConsumptionRatio,
+    avgL1V, avgL2V, avgL3V, avgL1A, avgL2A, avgL3A,
+    avgPowerFactor, avgFrequencyHz,
+  };
+}
+
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
 function computeHourlyBuckets(readings: any[]): any[] {
   const buckets: Record<number, { first: any; last: any }> = {};
   for (const r of readings) {
-    const date = new Date(r.timestamp);
-    const hour = date.getHours();
+    const hour = budapestHour(r.timestamp);
     if (!buckets[hour]) {
       buckets[hour] = { first: r, last: r };
     } else {
@@ -52,22 +137,6 @@ function computeDailyConsumedExported(readings: any[]): { consumed: number; expo
   return { consumed, exported };
 }
 
-function dateRangeMillis(dateStr: string): [number, number] {
-  const date = new Date(dateStr + "T00:00:00");
-  const startMs = date.getTime();
-  const nextDay = new Date(date);
-  nextDay.setDate(nextDay.getDate() + 1);
-  return [startMs, nextDay.getTime()];
-}
-
-function todayDateString(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function dateStringFromCal(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
 // ── GET /api/energy/:homeId/daily ──
 router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: string }, res: Response) => {
   if (!isMongoConnected()) { res.status(503).json({ error: "DB not connected" }); return; }
@@ -89,6 +158,28 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
     const invDaily = await InverterDailySummary.findOne({ homeId, date: today }).lean();
     const latestInv = await InverterReading.findOne({ homeId }).sort({ timestamp: -1 }).lean();
     const producedKwh = invDaily?.producedKwh ?? latestInv?.dailyEnergyKwh ?? 0;
+
+    // Get today's P1 daily summary (if the Hub has pushed one)
+    const p1Daily = await P1DailySummary.findOne({ homeId, date: today }).lean();
+
+    // Compute peak hours from hourly buckets
+    let peakConsumptionHour = -1, peakExportHour = -1;
+    let peakConsumptionKwh = 0, peakExportKwh = 0;
+    for (const h of hourly) {
+      if (h.consumedKwh > peakConsumptionKwh) {
+        peakConsumptionKwh = h.consumedKwh;
+        peakConsumptionHour = h.hour;
+      }
+      if (h.exportedKwh > peakExportKwh) {
+        peakExportKwh = h.exportedKwh;
+        peakExportHour = h.hour;
+      }
+    }
+
+    // Use P1DailySummary if available, otherwise compute from raw readings
+    const rawStats = computeDailyStatsFromRaw(rawReadings, totalConsumed, totalExported, producedKwh);
+
+    const dailyStats = p1Daily || rawStats || {};
 
     res.json({
       hourly,
@@ -113,6 +204,30 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
       latestPowerFactor: latest?.powerFactor ?? 0,
       latestFrequencyHz: latest?.frequencyHz ?? 50,
       latestCurrentTariff: latest?.currentTariff ?? 1,
+      // ── Daily statistics (from P1DailySummary or computed from raw) ──
+      minPowerW: dailyStats.minPowerW ?? 0,
+      maxPowerW: dailyStats.maxPowerW ?? 0,
+      avgPowerW: dailyStats.avgPowerW ?? 0,
+      maxImportW: dailyStats.maxImportW ?? 0,
+      maxExportW: dailyStats.maxExportW ?? 0,
+      peakConsumptionHour: p1Daily?.peakConsumptionHour ?? peakConsumptionHour,
+      peakExportHour: p1Daily?.peakExportHour ?? peakExportHour,
+      peakConsumptionKwh: p1Daily?.peakConsumptionKwh ?? peakConsumptionKwh,
+      peakExportKwh: p1Daily?.peakExportKwh ?? peakExportKwh,
+      selfConsumptionRatio: dailyStats.selfConsumptionRatio ?? 0,
+      netEnergyKwh: dailyStats.netEnergyKwh ?? 0,
+      importT1Kwh: dailyStats.importT1Kwh ?? 0,
+      importT2Kwh: dailyStats.importT2Kwh ?? 0,
+      exportT1Kwh: dailyStats.exportT1Kwh ?? 0,
+      exportT2Kwh: dailyStats.exportT2Kwh ?? 0,
+      avgL1V: dailyStats.avgL1V ?? 0,
+      avgL2V: dailyStats.avgL2V ?? 0,
+      avgL3V: dailyStats.avgL3V ?? 0,
+      avgL1A: dailyStats.avgL1A ?? 0,
+      avgL2A: dailyStats.avgL2A ?? 0,
+      avgL3A: dailyStats.avgL3A ?? 0,
+      avgPowerFactor: dailyStats.avgPowerFactor ?? 0,
+      avgFrequencyHz: dailyStats.avgFrequencyHz ?? 50,
     });
   } catch (err) {
     console.error("[energy/daily] Error:", err);
