@@ -15,10 +15,15 @@ import com.homeassisthub.client.network.WeatherForecastService
 import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.network.model.EnergyDailyResponseDto
 import com.homeassisthub.client.network.model.EnergyPeriodResponseDto
+import com.homeassisthub.client.network.model.LivePowerData
 import com.homeassisthub.client.network.model.P1ReadingDto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -54,6 +59,11 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _cloudSyncLastTime = MutableStateFlow<Long>(0L)
     val cloudSyncLastTime: StateFlow<Long> = _cloudSyncLastTime.asStateFlow()
+
+    private val _livePower = MutableStateFlow<LivePowerData?>(null)
+    val livePower: StateFlow<LivePowerData?> = _livePower.asStateFlow()
+
+    private var pollingJob: Job? = null
 
     private val weatherService by lazy { WeatherForecastService.create() }
 
@@ -107,6 +117,7 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
                     val liveDataObj = liveResp.optJSONObject("data")
                     val readingsJson = liveDataObj?.optJSONArray("readings")
                     _liveReadings.value = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
+                    _liveReadings.value.lastOrNull()?.let { _livePower.value = LivePowerData.fromReading(it) }
                     val summaryJson = liveDataObj?.optJSONObject("dailySummary")
                     _liveDailySummary.value = summaryJson?.let {
                         DailySummaryDto(
@@ -133,7 +144,39 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
             _isLoading.value = false
         }
 
+        startLivePolling()
         fetchPvForecast()
+    }
+
+    /** Starts a 2-second polling loop that fetches only the latest P1 reading
+     *  via Socket.IO, so the Élő Adatok card updates in near-real-time
+     *  instead of waiting for the Kiosk API's ~5 min cycle. */
+    fun startLivePolling() {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                val config = configStore.getConfig()
+                if (config == null || config.syncToken.isBlank()) {
+                    delay(2_000L)
+                    continue
+                }
+                val manager = ensureSocketConnected(config)
+                runCatching {
+                    val resp = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to "1"))
+                    if (resp.optBoolean("success")) {
+                        val readingsJson = resp.optJSONObject("data")?.optJSONArray("readings")
+                        val readings = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
+                        if (readings.isNotEmpty()) {
+                            _liveReadings.value = readings
+                            _livePower.value = LivePowerData.fromReading(readings.last())
+                        }
+                    }
+                }.onFailure {
+                    Log.w("EnergyVM", "Live poll failed: ${it.message}")
+                }
+                delay(2_000L)
+            }
+        }
     }
 
     fun fetchRange(startDate: String, endDate: String) {
@@ -219,6 +262,7 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
+        pollingJob?.cancel()
         socketManager?.disconnect()
         super.onCleared()
     }

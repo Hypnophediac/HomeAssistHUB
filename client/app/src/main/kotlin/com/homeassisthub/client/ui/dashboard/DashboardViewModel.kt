@@ -10,13 +10,17 @@ import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
+import com.homeassisthub.client.network.model.LivePowerData
 import com.homeassisthub.client.network.model.P1ReadingDto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.json.JSONObject
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -38,6 +42,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
+    private val _livePower = MutableStateFlow<LivePowerData?>(null)
+    val livePower: StateFlow<LivePowerData?> = _livePower.asStateFlow()
+
+    private var pollingJob: Job? = null
+
     fun refresh() {
         viewModelScope.launch {
             val config = configStore.getConfig()
@@ -58,6 +67,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 val dataObj = historyResponse.optJSONObject("data")
                 val readingsJson = dataObj?.optJSONArray("readings")
                 _p1History.value = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
+                _p1History.value.lastOrNull()?.let { _livePower.value = LivePowerData.fromReading(it) }
                 val summaryJson = dataObj?.optJSONObject("dailySummary")
                 _dailySummary.value = summaryJson?.let {
                     DailySummaryDto(
@@ -69,6 +79,32 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }.onFailure {
                 _statusMessage.value = "Hiba a Hub elérésekor: ${it.message}"
+            }
+        }
+
+        startLivePolling()
+    }
+
+    /** 2-second polling loop for near-real-time P1 updates. */
+    fun startLivePolling() {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                val config = configStore.getConfig()
+                if (config == null) { delay(2_000L); continue }
+                val manager = ensureSocketConnected(config)
+                runCatching {
+                    val resp = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to "1"))
+                    if (resp.optBoolean("success")) {
+                        val readingsJson = resp.optJSONObject("data")?.optJSONArray("readings")
+                        val readings = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
+                        if (readings.isNotEmpty()) {
+                            _p1History.value = readings
+                            _livePower.value = LivePowerData.fromReading(readings.last())
+                        }
+                    }
+                }.onFailure { Log.w("DashboardVM", "Live poll failed: ${it.message}") }
+                delay(2_000L)
             }
         }
     }
@@ -125,6 +161,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     override fun onCleared() {
+        pollingJob?.cancel()
         socketManager?.disconnect()
         super.onCleared()
     }

@@ -14,3 +14,16 @@ fun formatKwh(kwh: Double, decimals: Int = 2): String {
         "%.${decimals}f kWh".format(kwh)
     }
 }
+
+/**
+ * Formats a power value (W) for display: values >= 1000 W are shown in
+ * kW with 2 decimal places, smaller values are shown in whole watts
+ * (e.g. 850 W -> "850 W", 2680 W -> "2.68 kW").
+ */
+fun formatW(w: Double): String {
+    return if (abs(w) < 1000.0) {
+        "${w.toInt()} W"
+    } else {
+        "%.2f kW".format(w / 1000.0)
+    }
+}

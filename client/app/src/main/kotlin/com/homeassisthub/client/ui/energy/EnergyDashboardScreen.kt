@@ -57,10 +57,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homeassisthub.client.network.model.EnergyDailyResponseDto
 import com.homeassisthub.client.network.model.EnergyPeriodResponseDto
-import com.homeassisthub.client.network.model.P1ReadingDto
+import com.homeassisthub.client.network.model.LivePowerData
 import com.homeassisthub.client.ui.components.FreshnessBadge
 import com.homeassisthub.client.ui.components.CloudSyncBadge
 import com.homeassisthub.client.util.formatKwh
+import com.homeassisthub.client.util.formatW
 
 @Composable
 fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
@@ -115,7 +116,7 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
 
         if (liveReadings.isNotEmpty()) {
             item {
-                LiveFlowCards(latest = liveReadings.last(), cloudSyncLastTime = cloudSyncLastTime)
+                LiveFlowCards(livePower = viewModel.livePower.collectAsState().value, cloudSyncLastTime = cloudSyncLastTime)
             }
         }
 
@@ -152,7 +153,7 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
                         val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
                         val visibleHourly = data.hourly.filter { it.hour <= currentHour }
                         EnergyColumnChart(
-                            labels = visibleHourly.map { "${it.hour}h" },
+                            labels = visibleHourly.map { "%02d:00".format(it.hour) },
                             consumedValues = visibleHourly.map { it.consumedKwh },
                             exportedValues = visibleHourly.map { it.exportedKwh }
                         )
@@ -329,7 +330,7 @@ private fun EnergyHeader(
 }
 
 @Composable
-private fun LiveFlowCards(latest: P1ReadingDto, cloudSyncLastTime: Long = 0L) {
+private fun LiveFlowCards(livePower: LivePowerData?, cloudSyncLastTime: Long = 0L) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -346,18 +347,12 @@ private fun LiveFlowCards(latest: P1ReadingDto, cloudSyncLastTime: Long = 0L) {
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                FreshnessBadge(timestampMs = latest.timestamp)
+                if (livePower != null) FreshnessBadge(timestampMs = livePower.timestamp)
                 CloudSyncBadge(lastSyncTimeMs = cloudSyncLastTime)
             }
             Spacer(modifier = Modifier.height(12.dp))
-            // Compute house consumption from the displayed values so the math
-            // is arithmetically consistent: Ház = Termelés + Import - Export
-            // (The Hub's realConsumptionW uses T-5min P1 data for Kiosk API
-            // delay compensation, which doesn't match the displayed real-time P1.)
-            val hasInverter = latest.inverterPowerW > 0.0
-            val houseW = if (hasInverter) {
-                maxOf(0.0, latest.inverterPowerW + latest.powerImportW - latest.powerExportW).toInt()
-            } else 0
+            val hasInverter = livePower?.hasInverter == true
+            val houseW = livePower?.houseW ?: 0.0
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -365,14 +360,14 @@ private fun LiveFlowCards(latest: P1ReadingDto, cloudSyncLastTime: Long = 0L) {
                 FlowCard(
                     modifier = Modifier.weight(1f),
                     title = "Napelem Termelés",
-                    value = if (hasInverter) "${latest.inverterPowerW.toInt()} W" else "— W",
+                    value = if (hasInverter) formatW(livePower!!.inverterPowerW) else "— W",
                     icon = Icons.Filled.SolarPower,
                     color = Color(0xFF10B981)
                 )
                 FlowCard(
                     modifier = Modifier.weight(1f),
                     title = "Ház Fogyasztás",
-                    value = if (hasInverter) "$houseW W" else "— W",
+                    value = if (hasInverter) formatW(houseW) else "— W",
                     icon = Icons.Filled.Bolt,
                     color = Color(0xFF8B5CF6)
                 )
@@ -385,14 +380,14 @@ private fun LiveFlowCards(latest: P1ReadingDto, cloudSyncLastTime: Long = 0L) {
                 FlowCard(
                     modifier = Modifier.weight(1f),
                     title = "Import (Vételezés)",
-                    value = "${latest.powerImportW.toInt()} W",
+                    value = formatW(livePower?.importW ?: 0.0),
                     icon = Icons.Filled.Bolt,
                     color = Color(0xFFF59E0B)
                 )
                 FlowCard(
                     modifier = Modifier.weight(1f),
                     title = "Export (Betáplálás)",
-                    value = "${latest.powerExportW.toInt()} W",
+                    value = formatW(livePower?.exportW ?: 0.0),
                     icon = Icons.Filled.SolarPower,
                     color = Color(0xFF3B82F6)
                 )
@@ -536,12 +531,12 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Vételezés",
-            value = "${data.latestPowerImportW.toInt()} W"
+            value = formatW(data.latestPowerImportW)
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Visszatáplálás",
-            value = "${data.latestPowerExportW.toInt()} W"
+            value = formatW(data.latestPowerExportW)
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -591,17 +586,17 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Min. teljesítmény",
-            value = "${data.minPowerW.toInt()} W"
+            value = formatW(data.minPowerW)
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Max. teljesítmény",
-            value = "${data.maxPowerW.toInt()} W"
+            value = formatW(data.maxPowerW)
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Átlag teljesítmény",
-            value = "${data.avgPowerW.toInt()} W"
+            value = formatW(data.avgPowerW)
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -612,12 +607,12 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Max. vételezés",
-            value = "${data.maxImportW.toInt()} W"
+            value = formatW(data.maxImportW)
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Max. visszatáplálás",
-            value = "${data.maxExportW.toInt()} W"
+            value = formatW(data.maxExportW)
         )
     }
     Spacer(modifier = Modifier.height(8.dp))

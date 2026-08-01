@@ -48,7 +48,7 @@ import com.homeassisthub.client.network.model.P1ReadingDto
 import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.ui.components.FreshnessBadge
 import com.homeassisthub.client.util.formatKwh
-import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
+import com.homeassisthub.client.util.formatW
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
@@ -270,27 +270,27 @@ private fun P1PowerCard(readings: List<P1ReadingDto>) {
                     StatChip(
                         label = "Napelem Termelés",
                         value = if (latest.inverterPowerW > 0.0) {
-                            "${latest.inverterPowerW.toInt()} W"
+                            formatW(latest.inverterPowerW)
                         } else {
                             "— W"
                         },
                         color = Color(0xFFF59E0B)
                     )
                     val isExporting = latest.powerExportW > latest.powerImportW
-                    val netPowerW = kotlin.math.abs(latest.powerImportW - latest.powerExportW).toInt()
+                    val netPowerW = kotlin.math.abs(latest.powerImportW - latest.powerExportW)
                     StatChip(
                         label = if (isExporting) "Betáplálás" else "Vételezés",
-                        value = if (netPowerW > 0) "${netPowerW} W" else "— W",
+                        value = if (netPowerW > 0) formatW(netPowerW) else "— W",
                         color = if (isExporting) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
                     )
                     val hasInverter = latest.inverterPowerW > 0.0
                     val houseW = if (hasInverter) {
-                        maxOf(0.0, latest.inverterPowerW + latest.powerImportW - latest.powerExportW).toInt()
-                    } else 0
+                        maxOf(0.0, latest.inverterPowerW + latest.powerImportW - latest.powerExportW)
+                    } else 0.0
                     StatChip(
                         label = "Ház Fogyasztás",
                         value = if (hasInverter) {
-                            "${houseW} W"
+                            formatW(houseW)
                         } else {
                             "— W"
                         },
@@ -454,6 +454,18 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
     }
     val model = entryModelOf(importEntries, exportEntries, inverterEntries, consumptionEntries)
 
+    val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+    val timeLabels = readings.map { r -> sdf.format(java.util.Date(r.timestamp)) }
+    val labelEvery = if (timeLabels.size > 8) timeLabels.size / 6 else 1
+    val timeFormatter = com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter<com.patrykandpatrick.vico.core.axis.AxisPosition.Horizontal.Bottom> { value, _ ->
+        val idx = value.toInt()
+        if (idx >= 0 && idx < timeLabels.size && idx % labelEvery == 0) {
+            timeLabels[idx]
+        } else {
+            ""
+        }
+    }
+
     Chart(
         chart = lineChart(
             lines = listOf(
@@ -465,7 +477,9 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         ),
         model = model,
         startAxis = rememberStartAxis(),
-        bottomAxis = rememberBottomAxis(),
+        bottomAxis = com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis(
+            valueFormatter = timeFormatter
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
