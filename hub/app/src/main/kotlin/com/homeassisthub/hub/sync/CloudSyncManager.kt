@@ -100,16 +100,28 @@ class CloudSyncManager(
     }
 
     private suspend fun syncBatch() {
-        val config = configStore.getConfig() ?: return
+        val config = configStore.getConfig() ?: run {
+            Log.w(TAG, "syncBatch: no config, skipping")
+            return
+        }
         if (config.syncToken.isBlank()) {
             Log.d(TAG, "No sync token configured, skipping cloud sync")
             return
         }
 
         val cursor = configStore.getSyncCursor()
-        val p1Readings = p1RawDao.getRangeSince(cursor, BATCH_LIMIT)
-        val invCursor = configStore.getSyncCursor() // same cursor for inverter history
+        // Self-heal: if cursor is in the future (e.g. poisoned by a past bug),
+        // reset to 0 so all raw data can be re-synced from scratch
+        val effectiveCursor = if (cursor > System.currentTimeMillis()) {
+            Log.w(TAG, "syncBatch: cursor $cursor is in the future, resetting to 0")
+            configStore.saveSyncCursor(0L)
+            0L
+        } else cursor
+        val p1Readings = p1RawDao.getRangeSince(effectiveCursor, BATCH_LIMIT)
+        val invCursor = effectiveCursor // same cursor for inverter history
         val inverterReadings = inverterHistoryDao.getRangeSince(invCursor, BATCH_LIMIT)
+
+        Log.d(TAG, "syncBatch: cursor=$cursor, p1=${p1Readings.size}, inv=${inverterReadings.size}")
 
         if (p1Readings.isEmpty() && inverterReadings.isEmpty()) return
 
@@ -167,9 +179,12 @@ class CloudSyncManager(
         try {
             httpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    val newCursor = maxOf(
-                        p1Readings.lastOrNull()?.timestamp ?: cursor,
-                        inverterReadings.lastOrNull()?.timestamp ?: cursor
+                    val newCursor = minOf(
+                        maxOf(
+                            p1Readings.lastOrNull()?.timestamp ?: cursor,
+                            inverterReadings.lastOrNull()?.timestamp ?: cursor
+                        ),
+                        System.currentTimeMillis() // never advance cursor into the future
                     )
                     configStore.saveSyncCursor(newCursor)
                     configStore.saveLastSyncTime(System.currentTimeMillis())

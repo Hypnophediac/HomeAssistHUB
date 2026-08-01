@@ -145,6 +145,9 @@ class HuaweiCloudScraper(
             today.set(Calendar.MINUTE, m)
             today.set(Calendar.SECOND, 0)
             today.set(Calendar.MILLISECOND, 0)
+            // Skip future timestamps — Kiosk API may return 0 for hours
+            // that haven't happened yet, which would poison the sync cursor
+            if (today.timeInMillis > System.currentTimeMillis() + 60_000L) continue
             points.add(
                 com.homeassisthub.hub.data.db.InverterHistoryEntity(
                     timestamp = today.timeInMillis,
