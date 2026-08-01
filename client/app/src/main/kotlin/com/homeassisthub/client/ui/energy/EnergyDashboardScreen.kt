@@ -60,6 +60,7 @@ import com.homeassisthub.client.network.model.EnergyPeriodResponseDto
 import com.homeassisthub.client.network.model.P1ReadingDto
 import com.homeassisthub.client.ui.components.FreshnessBadge
 import com.homeassisthub.client.ui.components.CloudSyncBadge
+import com.homeassisthub.client.util.formatKwh
 
 @Composable
 fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
@@ -474,14 +475,14 @@ private fun ForecastCard(
                     FlowCard(
                         modifier = Modifier.weight(1f),
                         title = "Mára várható",
-                        value = "%.1f kWh".format(forecast.estimatedTodayKwh),
+                        value = formatKwh(forecast.estimatedTodayKwh, decimals = 1),
                         icon = Icons.Filled.WbSunny,
                         color = Color(0xFFF59E0B)
                     )
                     FlowCard(
                         modifier = Modifier.weight(1f),
                         title = "Eddig termelt",
-                        value = actualTodayKwh?.let { "%.1f kWh".format(it) } ?: "— kWh",
+                        value = actualTodayKwh?.let { formatKwh(it, decimals = 1) } ?: "— kWh",
                         icon = Icons.Filled.SolarPower,
                         color = Color(0xFF10B981)
                     )
@@ -508,14 +509,14 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         SummaryCard(
             modifier = Modifier.weight(1f),
             title = "Vételezés",
-            value = "%.2f kWh".format(data.totalConsumedKwh),
+            value = formatKwh(data.totalConsumedKwh),
             color = Color(0xFFE65100),
             icon = Icons.Filled.Bolt
         )
         SummaryCard(
             modifier = Modifier.weight(1f),
             title = "Visszatáplálás",
-            value = "%.2f kWh".format(data.totalExportedKwh),
+            value = formatKwh(data.totalExportedKwh),
             color = Color(0xFF2E7D32),
             icon = Icons.Filled.SolarPower
         )
@@ -620,12 +621,12 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Csúcs vételezés",
-            value = if (data.peakConsumptionHour >= 0) "${data.peakConsumptionHour}:00 (${"%.2f".format(data.peakConsumptionKwh)} kWh)" else "N/A"
+            value = if (data.peakConsumptionHour >= 0) "${data.peakConsumptionHour}:00 (${formatKwh(data.peakConsumptionKwh)})" else "N/A"
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Csúcs visszatáplálás",
-            value = if (data.peakExportHour >= 0) "${data.peakExportHour}:00 (${"%.2f".format(data.peakExportKwh)} kWh)" else "N/A"
+            value = if (data.peakExportHour >= 0) "${data.peakExportHour}:00 (${formatKwh(data.peakExportKwh)})" else "N/A"
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -641,7 +642,7 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Hálózati egyenleg",
-            value = "%.2f kWh".format(data.netEnergyKwh)
+            value = formatKwh(data.netEnergyKwh)
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -652,12 +653,12 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Tariff 1 (nappal)",
-            value = "%.2f kWh".format(data.importT1Kwh)
+            value = formatKwh(data.importT1Kwh)
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Tariff 2 (éjszaka)",
-            value = "%.2f kWh".format(data.importT2Kwh)
+            value = formatKwh(data.importT2Kwh)
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -668,12 +669,12 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Export T1",
-            value = "%.2f kWh".format(data.exportT1Kwh)
+            value = formatKwh(data.exportT1Kwh)
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Export T2",
-            value = "%.2f kWh".format(data.exportT2Kwh)
+            value = formatKwh(data.exportT2Kwh)
         )
     }
     // ── Per-phase daily averages ──
@@ -726,14 +727,14 @@ private fun PeriodSummaryCards(data: EnergyPeriodResponseDto) {
         SummaryCard(
             modifier = Modifier.weight(1f),
             title = "Vételezés",
-            value = "%.2f kWh".format(data.totalConsumedKwh),
+            value = formatKwh(data.totalConsumedKwh),
             color = Color(0xFFE65100),
             icon = Icons.Filled.Bolt
         )
         SummaryCard(
             modifier = Modifier.weight(1f),
             title = "Visszatáplálás",
-            value = "%.2f kWh".format(data.totalExportedKwh),
+            value = formatKwh(data.totalExportedKwh),
             color = Color(0xFF2E7D32),
             icon = Icons.Filled.SolarPower
         )
@@ -747,7 +748,7 @@ private fun PeriodSummaryCards(data: EnergyPeriodResponseDto) {
             SummaryCard(
                 modifier = Modifier.weight(1f),
                 title = "Összes Termelés",
-                value = "%.2f kWh".format(data.totalProducedKwh),
+                value = formatKwh(data.totalProducedKwh),
                 color = Color(0xFF10B981),
                 icon = Icons.Filled.WbSunny
             )

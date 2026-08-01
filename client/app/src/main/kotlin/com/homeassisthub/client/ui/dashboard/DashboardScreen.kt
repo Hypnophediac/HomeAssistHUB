@@ -47,6 +47,7 @@ import com.homeassisthub.client.R
 import com.homeassisthub.client.network.model.P1ReadingDto
 import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.ui.components.FreshnessBadge
+import com.homeassisthub.client.util.formatKwh
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -503,17 +504,17 @@ private fun DailySummaryCard(summary: DailySummaryDto) {
             ) {
                 DailyStatChip(
                     label = "Napelem Termelés",
-                    value = "%.2f kWh".format(rInverter),
+                    value = formatKwh(rInverter),
                     color = Color(0xFFF59E0B)
                 )
                 DailyStatChip(
                     label = "Vételezés",
-                    value = "%.2f kWh".format(rImport),
+                    value = formatKwh(rImport),
                     color = MaterialTheme.colorScheme.error
                 )
                 DailyStatChip(
                     label = "Betáplálás",
-                    value = "%.2f kWh".format(rExport),
+                    value = formatKwh(rExport),
                     color = Color(0xFF2E7D32)
                 )
             }
@@ -536,7 +537,7 @@ private fun DailySummaryCard(summary: DailySummaryDto) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Ház Napi Fogyasztás: %.2f kWh".format(rHouse),
+                        text = "Ház Napi Fogyasztás: ${formatKwh(rHouse)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
