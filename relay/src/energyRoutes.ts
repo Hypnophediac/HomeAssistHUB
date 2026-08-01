@@ -55,12 +55,12 @@ function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalE
   if (readings.length === 0) return null;
   const powers = readings.map(r => r.currentPowerW || 0);
   const imports = readings.map(r => r.powerImportW || 0);
-  const exports = readings.map(r => r.powerExportW || 0);
+  const exportPowers = readings.map(r => r.powerExportW || 0);
   const minPowerW = Math.min(...powers);
   const maxPowerW = Math.max(...powers);
   const avgPowerW = powers.reduce((s, v) => s + v, 0) / powers.length;
   const maxImportW = Math.max(...imports);
-  const maxExportW = Math.max(...exports);
+  const maxExportW = Math.max(...exportPowers);
 
   // Tariff deltas from first to last reading
   const first = readings[0];
