@@ -350,7 +350,14 @@ private fun LiveFlowCards(latest: P1ReadingDto, cloudSyncLastTime: Long = 0L) {
                 CloudSyncBadge(lastSyncTimeMs = cloudSyncLastTime)
             }
             Spacer(modifier = Modifier.height(12.dp))
-            val houseW = maxOf(0.0, latest.realConsumptionW).toInt()
+            // Compute house consumption from the displayed values so the math
+            // is arithmetically consistent: Ház = Termelés + Import - Export
+            // (The Hub's realConsumptionW uses T-5min P1 data for Kiosk API
+            // delay compensation, which doesn't match the displayed real-time P1.)
+            val hasInverter = latest.inverterPowerW > 0.0
+            val houseW = if (hasInverter) {
+                maxOf(0.0, latest.inverterPowerW + latest.powerImportW - latest.powerExportW).toInt()
+            } else 0
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -358,14 +365,14 @@ private fun LiveFlowCards(latest: P1ReadingDto, cloudSyncLastTime: Long = 0L) {
                 FlowCard(
                     modifier = Modifier.weight(1f),
                     title = "Napelem Termelés",
-                    value = if (latest.inverterPowerW > 0.0) "${latest.inverterPowerW.toInt()} W" else "— W",
+                    value = if (hasInverter) "${latest.inverterPowerW.toInt()} W" else "— W",
                     icon = Icons.Filled.SolarPower,
                     color = Color(0xFF10B981)
                 )
                 FlowCard(
                     modifier = Modifier.weight(1f),
                     title = "Ház Fogyasztás",
-                    value = if (latest.inverterPowerW > 0.0 || latest.realConsumptionW > 0.0) "$houseW W" else "— W",
+                    value = if (hasInverter) "$houseW W" else "— W",
                     icon = Icons.Filled.Bolt,
                     color = Color(0xFF8B5CF6)
                 )

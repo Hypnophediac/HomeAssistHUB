@@ -283,10 +283,13 @@ private fun P1PowerCard(readings: List<P1ReadingDto>) {
                         value = if (netPowerW > 0) "${netPowerW} W" else "— W",
                         color = if (isExporting) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
                     )
-                    val houseW = maxOf(0.0, latest.realConsumptionW).toInt()
+                    val hasInverter = latest.inverterPowerW > 0.0
+                    val houseW = if (hasInverter) {
+                        maxOf(0.0, latest.inverterPowerW + latest.powerImportW - latest.powerExportW).toInt()
+                    } else 0
                     StatChip(
                         label = "Ház Fogyasztás",
-                        value = if (latest.inverterPowerW > 0.0 || latest.realConsumptionW > 0.0) {
+                        value = if (hasInverter) {
                             "${houseW} W"
                         } else {
                             "— W"
@@ -446,7 +449,8 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         com.patrykandpatrick.vico.core.entry.entryOf(index.toFloat(), reading.inverterPowerW.toFloat())
     }
     val consumptionEntries = readings.mapIndexed { index, reading ->
-        com.patrykandpatrick.vico.core.entry.entryOf(index.toFloat(), reading.realConsumptionW.toFloat())
+        val computed = maxOf(0.0, reading.inverterPowerW + reading.powerImportW - reading.powerExportW)
+        com.patrykandpatrick.vico.core.entry.entryOf(index.toFloat(), computed.toFloat())
     }
     val model = entryModelOf(importEntries, exportEntries, inverterEntries, consumptionEntries)
 
