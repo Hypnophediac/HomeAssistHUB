@@ -38,10 +38,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homeassisthub.client.R
 import com.homeassisthub.client.network.model.P1ReadingDto
@@ -49,11 +53,6 @@ import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.ui.components.FreshnessBadge
 import com.homeassisthub.client.util.formatKwh
 import com.homeassisthub.client.util.formatW
-import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
-import com.patrykandpatrick.vico.compose.chart.Chart
-import com.patrykandpatrick.vico.compose.chart.line.lineChart
-import com.patrykandpatrick.vico.compose.chart.line.lineSpec
-import com.patrykandpatrick.vico.core.entry.entryModelOf
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
@@ -439,51 +438,119 @@ private fun PlugCard(
 
 @Composable
 private fun P1HistoryChart(readings: List<P1ReadingDto>) {
-    val importEntries = readings.mapIndexed { index, reading ->
-        com.patrykandpatrick.vico.core.entry.entryOf(index.toFloat(), reading.powerImportW.toFloat())
-    }
-    val exportEntries = readings.mapIndexed { index, reading ->
-        com.patrykandpatrick.vico.core.entry.entryOf(index.toFloat(), reading.powerExportW.toFloat())
-    }
-    val inverterEntries = readings.mapIndexed { index, reading ->
-        com.patrykandpatrick.vico.core.entry.entryOf(index.toFloat(), reading.inverterPowerW.toFloat())
-    }
-    val consumptionEntries = readings.mapIndexed { index, reading ->
-        val computed = maxOf(0.0, reading.inverterPowerW + reading.powerImportW - reading.powerExportW)
-        com.patrykandpatrick.vico.core.entry.entryOf(index.toFloat(), computed.toFloat())
-    }
-    val model = entryModelOf(importEntries, exportEntries, inverterEntries, consumptionEntries)
+    val chartReadings = readings.takeLast(60)
+    if (chartReadings.isEmpty()) return
 
     val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-    val timeLabels = readings.map { r -> sdf.format(java.util.Date(r.timestamp)) }
+    val timeLabels = chartReadings.map { r -> sdf.format(java.util.Date(r.timestamp)) }
     val labelEvery = if (timeLabels.size > 8) timeLabels.size / 6 else 1
-    val timeFormatter = com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter<com.patrykandpatrick.vico.core.axis.AxisPosition.Horizontal.Bottom> { value, _ ->
-        val idx = value.toInt()
-        if (idx >= 0 && idx < timeLabels.size && idx % labelEvery == 0) {
-            timeLabels[idx]
-        } else {
-            ""
-        }
+
+    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val axisFontSizePx = with(density) { 9.sp.toPx() }
+    val yLabelPaddingPx = with(density) { 4.dp.toPx() }
+    val xLabelHeightPx = with(density) { 14.dp.toPx() }
+    val yLabelWidthPx = with(density) { 40.dp.toPx() }
+
+    val importColor = Color(0xFFEF4444)
+    val exportColor = Color(0xFF22C55E)
+    val inverterColor = Color(0xFFF59E0B)
+    val consumptionColor = Color(0xFF3B82F6)
+
+    val importSeries = chartReadings.map { it.powerImportW.toFloat() }
+    val exportSeries = chartReadings.map { it.powerExportW.toFloat() }
+    val inverterSeries = chartReadings.map { it.inverterPowerW.toFloat() }
+    val consumptionSeries = chartReadings.map {
+        maxOf(0f, it.inverterPowerW.toFloat() + it.powerImportW.toFloat() - it.powerExportW.toFloat())
     }
 
-    Chart(
-        chart = lineChart(
-            lines = listOf(
-                lineSpec(lineColor = Color(0xFFEF4444)), // Import - red
-                lineSpec(lineColor = Color(0xFF22C55E)), // Export - green
-                lineSpec(lineColor = Color(0xFFF59E0B)), // Inverter - amber
-                lineSpec(lineColor = Color(0xFF3B82F6)), // Real consumption - blue
-            )
-        ),
-        model = model,
-        startAxis = rememberStartAxis(),
-        bottomAxis = com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis(
-            valueFormatter = timeFormatter
-        ),
+    val allValues = importSeries + exportSeries + inverterSeries + consumptionSeries
+    val maxVal = (allValues.maxOrNull() ?: 1f).coerceAtLeast(1f)
+    val niceMax = maxVal * 1.15f
+
+    androidx.compose.foundation.Canvas(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
-    )
+            .padding(top = 8.dp)
+    ) {
+        val canvasW = size.width
+        val labelW = yLabelWidthPx
+        val xLabelH = xLabelHeightPx
+        val chartW = canvasW - labelW
+        val chartH = size.height - xLabelH
+
+        val gridSteps = 4
+        val yPaint = android.graphics.Paint().apply {
+            color = labelColor.toArgb()
+            textSize = axisFontSizePx
+            textAlign = android.graphics.Paint.Align.RIGHT
+            isAntiAlias = true
+        }
+        for (i in 0..gridSteps) {
+            val y = chartH - (chartH * i / gridSteps)
+            val value = niceMax * i / gridSteps
+            drawLine(
+                color = gridColor,
+                start = Offset(labelW, y),
+                end = Offset(canvasW, y),
+                strokeWidth = 1f
+            )
+            drawContext.canvas.nativeCanvas.drawText(
+                String.format(java.util.Locale.US, "%.0f", value),
+                labelW - yLabelPaddingPx,
+                y + axisFontSizePx / 3f,
+                yPaint
+            )
+        }
+
+        drawLine(color = axisColor, start = Offset(labelW, 0f), end = Offset(labelW, chartH), strokeWidth = 1.5f)
+        drawLine(color = axisColor, start = Offset(labelW, chartH), end = Offset(canvasW, chartH), strokeWidth = 1.5f)
+
+        val stepX = if (chartReadings.size > 1) chartW / (chartReadings.size - 1) else chartW
+
+        fun drawLineSeries(series: List<Float>, color: Color) {
+            if (series.size < 2) return
+            val paint = android.graphics.Paint().apply {
+                this.color = color.toArgb()
+                isAntiAlias = true
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 2f
+            }
+            val path = android.graphics.Path()
+            for (i in series.indices) {
+                val x = labelW + i * stepX
+                val y = chartH - (series[i] / niceMax * chartH)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            drawContext.canvas.nativeCanvas.drawPath(path, paint)
+        }
+
+        drawLineSeries(importSeries, importColor)
+        drawLineSeries(exportSeries, exportColor)
+        drawLineSeries(inverterSeries, inverterColor)
+        drawLineSeries(consumptionSeries, consumptionColor)
+
+        val xPaint = android.graphics.Paint().apply {
+            color = labelColor.toArgb()
+            textSize = axisFontSizePx
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+        for (i in chartReadings.indices) {
+            if (i % labelEvery == 0) {
+                val x = labelW + i * stepX
+                drawContext.canvas.nativeCanvas.drawText(
+                    timeLabels[i],
+                    x,
+                    chartH + xLabelH - yLabelPaddingPx,
+                    xPaint
+                )
+            }
+        }
+    }
 }
 
 @Composable
