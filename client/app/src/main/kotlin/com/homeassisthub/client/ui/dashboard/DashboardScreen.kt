@@ -275,7 +275,7 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     StatChip(
-                        label = "Napelem Termelés",
+                        label = "Napelem",
                         value = if (lp != null && lp.inverterPowerW > 0.0) {
                             formatW(lp.inverterPowerW)
                         } else {
@@ -284,21 +284,23 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                         color = Color(0xFFF59E0B)
                     )
                     StatChip(
-                        label = if (lp != null && lp.exportW > 0) "Betáplálás" else "Vételezés",
-                        value = if (lp != null) {
-                            val net = if (lp.exportW > 0) lp.exportW else lp.importW
-                            if (net > 0) formatW(net) else "— W"
-                        } else "— W",
-                        color = if (lp != null && lp.exportW > 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
-                    )
-                    StatChip(
-                        label = "Ház Fogyasztás",
+                        label = "Ház Fogy.",
                         value = if (lp != null && lp.hasInverter) {
                             formatW(lp.houseW)
                         } else {
                             "— W"
                         },
                         color = MaterialTheme.colorScheme.primary
+                    )
+                    StatChip(
+                        label = "Vételezés",
+                        value = if (lp != null && lp.importW > 0) formatW(lp.importW) else "0 W",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    StatChip(
+                        label = "Betáplálás",
+                        value = if (lp != null && lp.exportW > 0) formatW(lp.exportW) else "0 W",
+                        color = Color(0xFF2E7D32)
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))

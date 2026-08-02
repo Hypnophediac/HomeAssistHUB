@@ -1,14 +1,14 @@
 package com.homeassisthub.client.network.model
 
 /**
- * Computed live power data with enforced mutual exclusivity:
- * a Hungarian ad-vesz meter never imports and exports simultaneously.
+ * Computed live power data for a 3-phase system.
  *
- * - If importing: importW > 0, exportW = 0
- * - If exporting: exportW > 0, importW = 0
+ * On a 3-phase P1 meter, import and export CAN coexist: one phase may
+ * import while another exports. The meter reports total import (sum of
+ * importing phases) and total export (sum of exporting phases) separately.
  *
  * House consumption = inverterPowerW + importW - exportW
- * (equivalently: inverterPowerW - netGridW when exporting)
+ * (i.e. vételezés + (napelem termelés - visszatáplálás))
  */
 data class LivePowerData(
     val inverterPowerW: Double,
@@ -29,9 +29,9 @@ data class LivePowerData(
 ) {
     companion object {
         fun fromReading(r: P1ReadingDto): LivePowerData {
-            // Enforce mutual exclusivity: a P1 meter never imports and exports at once
-            val importW = if (r.powerImportW > r.powerExportW) r.powerImportW else 0.0
-            val exportW = if (r.powerExportW > r.powerImportW) r.powerExportW else 0.0
+            // 3-phase: import and export are independent, do NOT enforce mutual exclusivity
+            val importW = r.powerImportW
+            val exportW = r.powerExportW
             val hasInverter = r.inverterPowerW > 0.0
             val houseW = if (hasInverter) {
                 maxOf(0.0, r.inverterPowerW + importW - exportW)
