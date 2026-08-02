@@ -86,7 +86,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /** 2-second polling loop for near-real-time P1 updates.
-     *  Every 30s also fetches the full 100-point history for the chart. */
+     *  Every 30s also fetches the full 24h history (1440 readings) for the chart. */
     fun startLivePolling() {
         pollingJob?.cancel()
         pollingJob = viewModelScope.launch(Dispatchers.IO) {
@@ -95,7 +95,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 val config = configStore.getConfig()
                 if (config == null) { delay(2_000L); continue }
                 val manager = ensureSocketConnected(config)
-                val limit = if (tick % 15 == 0) "100" else "1"
+                val limit = if (tick % 15 == 0) "1440" else "1"
                 runCatching {
                     val resp = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to limit))
                     if (resp.optBoolean("success")) {
@@ -103,7 +103,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         val readings = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
                         if (readings.isNotEmpty()) {
                             _livePower.value = LivePowerData.fromReading(readings.last())
-                            if (limit == "100") {
+                            if (limit == "1440") {
                                 _p1History.value = readings
                             }
                         }

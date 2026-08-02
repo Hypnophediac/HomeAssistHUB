@@ -2,7 +2,7 @@ package com.homeassisthub.client.ui.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ElectricalServices
@@ -449,12 +448,15 @@ private fun PlugCard(
 
 @Composable
 private fun P1HistoryChart(readings: List<P1ReadingDto>) {
-    val chartReadings = readings.takeLast(60)
-    if (chartReadings.isEmpty()) return
-
-    val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-    val timeLabels = chartReadings.map { r -> sdf.format(java.util.Date(r.timestamp)) }
-    val labelEvery = if (timeLabels.size > 8) timeLabels.size / 6 else 1
+    // Filter to today's readings only
+    val cal = java.util.Calendar.getInstance()
+    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+    cal.set(java.util.Calendar.MINUTE, 0)
+    cal.set(java.util.Calendar.SECOND, 0)
+    cal.set(java.util.Calendar.MILLISECOND, 0)
+    val midnightMs = cal.timeInMillis
+    val todayReadings = readings.filter { it.timestamp >= midnightMs }
+    if (todayReadings.isEmpty()) return
 
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
@@ -470,118 +472,143 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
     val inverterColor = Color(0xFFF59E0B)
     val consumptionColor = Color(0xFF3B82F6)
 
-    val importSeries = chartReadings.map { it.powerImportW.toFloat() }
-    val exportSeries = chartReadings.map { it.powerExportW.toFloat() }
-    val inverterSeries = chartReadings.map { it.inverterPowerW.toFloat() }
-    val consumptionSeries = chartReadings.map {
-        maxOf(0f, it.inverterPowerW.toFloat() + it.powerImportW.toFloat() - it.powerExportW.toFloat())
-    }
-
-    // Fixed Y-scale: 5kW = inverter max capacity
     val niceMax = 5000f
 
-    // Pan/zoom state
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    val transformState = Modifier.pointerInput(Unit) {
-        detectTransformGestures { _, pan, zoom, _ ->
-            scale = (scale * zoom).coerceIn(1f, 5f)
-            offsetX = (offsetX + pan.x).coerceIn(0f, 10000f)
-        }
-    }
+    // Zoom state: 1x = fit screen, up to 4x
+    var zoomLevel by remember { mutableFloatStateOf(1f) }
+    val scrollState = androidx.compose.foundation.rememberScrollState()
 
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .padding(top = 8.dp)
-            .then(transformState)
-    ) {
-        val canvasW = size.width
-        val labelW = yLabelWidthPx
-        val xLabelH = xLabelHeightPx
-        val chartW = canvasW - labelW
-        val chartH = size.height - xLabelH
-
-        // Apply zoom: visible window shrinks/grows
-        val visibleW = chartW / scale
-        val maxOffset = (chartW - visibleW).coerceAtLeast(0f)
-        val effectiveOffsetX = if (scale > 1f) offsetX.coerceIn(0f, maxOffset) else 0f
-
-        val gridSteps = 4
-        val yPaint = android.graphics.Paint().apply {
-            color = labelColor.toArgb()
-            textSize = axisFontSizePx
-            textAlign = android.graphics.Paint.Align.RIGHT
-            isAntiAlias = true
-        }
-        for (i in 0..gridSteps) {
-            val y = chartH - (chartH * i / gridSteps)
-            val value = niceMax * i / gridSteps
-            drawLine(
-                color = gridColor,
-                start = Offset(labelW, y),
-                end = Offset(canvasW, y),
-                strokeWidth = 1f
+    Column {
+        // Zoom controls
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Zoom: ${zoomLevel.toInt()}x",
+                style = MaterialTheme.typography.labelSmall,
+                color = labelColor
             )
-            drawContext.canvas.nativeCanvas.drawText(
-                String.format(java.util.Locale.US, "%.0f", value),
-                labelW - yLabelPaddingPx,
-                y + axisFontSizePx / 3f,
-                yPaint
-            )
-        }
-
-        drawLine(color = axisColor, start = Offset(labelW, 0f), end = Offset(labelW, chartH), strokeWidth = 1.5f)
-        drawLine(color = axisColor, start = Offset(labelW, chartH), end = Offset(canvasW, chartH), strokeWidth = 1.5f)
-
-        val stepX = if (chartReadings.size > 1) chartW / (chartReadings.size - 1) else chartW
-
-        // Clip to visible area for pan/zoom
-        drawContext.canvas.nativeCanvas.save()
-        drawContext.canvas.nativeCanvas.clipRect(labelW, 0f, canvasW, chartH)
-
-        fun drawLineSeries(series: List<Float>, color: Color) {
-            if (series.size < 2) return
-            val paint = android.graphics.Paint().apply {
-                this.color = color.toArgb()
-                isAntiAlias = true
-                style = android.graphics.Paint.Style.STROKE
-                strokeWidth = 2f
+            Spacer(modifier = Modifier.width(4.dp))
+            FilledIconButton(
+                onClick = { zoomLevel = (zoomLevel - 1f).coerceIn(1f, 4f) },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Text("−", style = MaterialTheme.typography.labelMedium)
             }
-            val path = android.graphics.Path()
-            for (i in series.indices) {
-                val x = labelW + i * stepX - effectiveOffsetX
-                val y = chartH - (series[i] / niceMax * chartH)
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            Spacer(modifier = Modifier.width(4.dp))
+            FilledIconButton(
+                onClick = { zoomLevel = (zoomLevel + 1f).coerceIn(1f, 4f) },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Text("+", style = MaterialTheme.typography.labelMedium)
             }
-            drawContext.canvas.nativeCanvas.drawPath(path, paint)
         }
 
-        drawLineSeries(importSeries, importColor)
-        drawLineSeries(exportSeries, exportColor)
-        drawLineSeries(inverterSeries, inverterColor)
-        drawLineSeries(consumptionSeries, consumptionColor)
+        // Horizontally scrollable chart
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            val screenW = maxWidth
+            val chartWidthDp = with(density) { (yLabelWidthPx + (screenW.toPx() - yLabelWidthPx) * zoomLevel).toDp() }
+            Canvas(
+                modifier = Modifier
+                    .width(chartWidthDp)
+                    .height(200.dp)
+                    .padding(top = 8.dp)
+                    .horizontalScroll(scrollState)
+            ) {
+                val canvasW = size.width
+                val labelW = yLabelWidthPx
+                val xLabelH = xLabelHeightPx
+                val chartW = canvasW - labelW
+                val chartH = size.height - xLabelH
 
-        drawContext.canvas.nativeCanvas.restore()
+                // X-axis: 0:00 to 24:00 = 86400000 ms
+                val dayMs = 86_400_000L
 
-        val xPaint = android.graphics.Paint().apply {
-            color = labelColor.toArgb()
-            textSize = axisFontSizePx
-            textAlign = android.graphics.Paint.Align.CENTER
-            isAntiAlias = true
-        }
-        for (i in chartReadings.indices) {
-            if (i % labelEvery == 0) {
-                val x = labelW + i * stepX - effectiveOffsetX
-                if (x >= labelW && x <= canvasW) {
+                // Hourly grid lines + labels (0, 2, 4, ... 24)
+                val yPaint = android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = axisFontSizePx
+                    textAlign = android.graphics.Paint.Align.RIGHT
+                    isAntiAlias = true
+                }
+                val gridSteps = 4
+                for (i in 0..gridSteps) {
+                    val y = chartH - (chartH * i / gridSteps)
+                    val value = niceMax * i / gridSteps
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(labelW, y),
+                        end = Offset(canvasW, y),
+                        strokeWidth = 1f
+                    )
                     drawContext.canvas.nativeCanvas.drawText(
-                        timeLabels[i],
+                        String.format(java.util.Locale.US, "%.0f", value),
+                        labelW - yLabelPaddingPx,
+                        y + axisFontSizePx / 3f,
+                        yPaint
+                    )
+                }
+
+                drawLine(color = axisColor, start = Offset(labelW, 0f), end = Offset(labelW, chartH), strokeWidth = 1.5f)
+                drawLine(color = axisColor, start = Offset(labelW, chartH), end = Offset(canvasW, chartH), strokeWidth = 1.5f)
+
+                // Vertical hour grid lines + X labels
+                val xPaint = android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = axisFontSizePx
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
+                }
+                for (hour in 0..24 step 2) {
+                    val x = labelW + (hour * 3_600_000L).toFloat() / dayMs * chartW
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(x, 0f),
+                        end = Offset(x, chartH),
+                        strokeWidth = 1f
+                    )
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "%02d:00".format(hour),
                         x,
                         chartH + xLabelH - yLabelPaddingPx,
                         xPaint
                     )
                 }
+
+                // Map each reading to X position based on time-of-day
+                fun timeToX(ts: Long): Float {
+                    val msIntoDay = ts - midnightMs
+                    return labelW + msIntoDay.toFloat() / dayMs * chartW
+                }
+
+                fun drawLineSeries(series: (P1ReadingDto) -> Float, color: Color) {
+                    if (todayReadings.size < 2) return
+                    val paint = android.graphics.Paint().apply {
+                        this.color = color.toArgb()
+                        isAntiAlias = true
+                        style = android.graphics.Paint.Style.STROKE
+                        strokeWidth = 2f
+                    }
+                    val path = android.graphics.Path()
+                    for (i in todayReadings.indices) {
+                        val r = todayReadings[i]
+                        val x = timeToX(r.timestamp)
+                        val y = chartH - (series(r) / niceMax * chartH)
+                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    drawContext.canvas.nativeCanvas.drawPath(path, paint)
+                }
+
+                drawLineSeries({ it.powerImportW.toFloat() }, importColor)
+                drawLineSeries({ it.powerExportW.toFloat() }, exportColor)
+                drawLineSeries({ it.inverterPowerW.toFloat() }, inverterColor)
+                drawLineSeries({
+                    maxOf(0f, it.inverterPowerW.toFloat() + it.powerImportW.toFloat() - it.powerExportW.toFloat())
+                }, consumptionColor)
             }
         }
     }
