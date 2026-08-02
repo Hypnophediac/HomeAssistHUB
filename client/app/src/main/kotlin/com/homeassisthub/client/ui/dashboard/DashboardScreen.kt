@@ -485,7 +485,7 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
             .padding(top = 8.dp)
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    zoomLevel = (zoomLevel * zoom).coerceIn(1f, 6f)
+                    zoomLevel = (zoomLevel * zoom).coerceIn(1f, 20f)
                     panOffsetPx += pan.x
                 }
             }
@@ -541,6 +541,8 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         }
         // Choose label interval based on zoom: 1x=2h, 2x=1h, 3x=30min, 4x+=10min
         val labelStepMinutes = when {
+            zoomLevel >= 12f -> 2
+            zoomLevel >= 8f -> 5
             zoomLevel >= 4f -> 10
             zoomLevel >= 3f -> 30
             zoomLevel >= 2f -> 60
