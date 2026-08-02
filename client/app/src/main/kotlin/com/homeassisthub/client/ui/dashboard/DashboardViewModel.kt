@@ -99,7 +99,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         val readingsJson = resp.optJSONObject("data")?.optJSONArray("readings")
                         val readings = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
                         if (readings.isNotEmpty()) {
-                            _p1History.value = readings
                             _livePower.value = LivePowerData.fromReading(readings.last())
                         }
                     }

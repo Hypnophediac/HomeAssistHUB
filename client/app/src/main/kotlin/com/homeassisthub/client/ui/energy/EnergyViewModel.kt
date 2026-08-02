@@ -167,7 +167,6 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
                         val readingsJson = resp.optJSONObject("data")?.optJSONArray("readings")
                         val readings = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
                         if (readings.isNotEmpty()) {
-                            _liveReadings.value = readings
                             _livePower.value = LivePowerData.fromReading(readings.last())
                         }
                     }
