@@ -40,8 +40,10 @@ object InverterLiveData {
         dailyEnergyKwh = dailyKwh
     }
 
-    /** True if we have a reading from the last 6 minutes; stale data is ignored by consumers.
-     *  6 min > 5 min scraper interval, so the Kiosk scraper's data is always considered fresh. */
-    fun isFresh(): Boolean = lastUpdateMs > 0L && (System.currentTimeMillis() - lastUpdateMs) < 360_000L
+    /** True if we have a reading from the last 30 minutes.
+     *  The Kiosk API can be temporarily unreachable (DNS, maintenance), so
+     *  we keep showing the last known inverter value for up to 30 minutes
+     *  instead of blanking it out after 6 minutes. */
+    fun isFresh(): Boolean = lastUpdateMs > 0L && (System.currentTimeMillis() - lastUpdateMs) < 1_800_000L
 }
 
