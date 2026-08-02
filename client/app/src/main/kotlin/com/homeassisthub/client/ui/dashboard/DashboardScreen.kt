@@ -377,24 +377,42 @@ private fun StatChip(label: String, value: String, color: Color = MaterialTheme.
 
 @Composable
 private fun PhasePowerChip(label: String, importW: Double, exportW: Double) {
-    val net = importW - exportW
-    val color = when {
-        net > 0 -> MaterialTheme.colorScheme.error
-        net < 0 -> Color(0xFF2E7D32)
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = formatW(kotlin.math.abs(net)),
-            style = MaterialTheme.typography.titleMedium,
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            text = "$label  ${if (net > 0) "↓" else if (net < 0) "↑" else "—"}",
-            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.height(2.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "↓",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = formatW(importW),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (importW > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "↑",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF2E7D32)
+                )
+                Text(
+                    text = formatW(exportW),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (exportW > 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+            }
+        }
     }
 }
 
