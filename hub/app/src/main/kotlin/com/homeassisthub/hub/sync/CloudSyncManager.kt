@@ -208,13 +208,16 @@ class CloudSyncManager(
                     configStore.saveSyncCursor(newCursor)
                     configStore.saveLastSyncTime(System.currentTimeMillis())
                     Log.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inverter readings, cursor=$newCursor")
+                    com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inv, cursor=$newCursor")
                 } else {
                     val respBody = response.body?.string().orEmpty()
                     Log.w(TAG, "Ingest failed: HTTP ${response.code} — $respBody")
+                    com.homeassisthub.hub.controller.HubLogBuffer.w(TAG, "Ingest failed: HTTP ${response.code}")
                 }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Ingest network error: ${e.message}")
+            com.homeassisthub.hub.controller.HubLogBuffer.w(TAG, "Ingest network error: ${e.message}")
         }
     }
 

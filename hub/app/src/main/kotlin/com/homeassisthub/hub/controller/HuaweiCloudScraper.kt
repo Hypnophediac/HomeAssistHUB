@@ -109,6 +109,7 @@ class HuaweiCloudScraper(
 
         InverterLiveData.update(activePowerW)
         Log.i(TAG, "Kiosk scrape OK: ${activePowerW}W (realTimePower=${realTimePowerKw}kW), daily=${dailyEnergyKwh}kWh")
+        com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Kiosk OK: ${activePowerW.toInt()}W, daily=${"%.2f".format(dailyEnergyKwh)}kWh")
 
         // Compute synchronized house consumption using T-5min P1 data.
         // The Kiosk API is ~5 min delayed vs the real-time P1 meter, so we
@@ -122,6 +123,7 @@ class HuaweiCloudScraper(
             val computed = activePowerW + netGridW
             val floored = maxOf(0.0, computed)
             Log.i(TAG, "Synced house consumption: ${floored}W (inverter=${activePowerW}W, netGrid@T-5=${netGridW}W)")
+            com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "House consumption: ${floored.toInt()}W (inv=${activePowerW.toInt()}W, grid@T-5=${netGridW.toInt()}W)")
             floored
         } else {
             Log.i(TAG, "No P1 data from T-5min available, house consumption = 0")

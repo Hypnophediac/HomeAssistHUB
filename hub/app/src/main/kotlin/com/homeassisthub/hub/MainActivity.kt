@@ -3,13 +3,14 @@ package com.homeassisthub.hub
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import android.app.ActivityManager
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,28 +18,47 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.homeassisthub.hub.controller.HubLogBuffer
+import com.homeassisthub.hub.controller.InverterLiveData
+import com.homeassisthub.hub.controller.P1HistoryBuffer
 import com.homeassisthub.hub.security.DeviceCredential
 import com.homeassisthub.hub.security.SecureCredentialStore
 import com.homeassisthub.hub.data.HubConfigStore
 import com.homeassisthub.hub.service.HubForegroundService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -56,9 +76,9 @@ class MainActivity : ComponentActivity() {
         val activity = this
 
         setContent {
-            MaterialTheme {
+            MaterialTheme(colorScheme = androidx.compose.material3.darkColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    HubControlScreen(
+                    HubDashboard(
                         credentialStore = credentialStore,
                         hubConfigStore = HubConfigStore(activity),
                         onStart = { ContextCompat.startForegroundService(activity, HubForegroundService.startIntent(activity)) },
@@ -82,7 +102,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun HubControlScreen(
+private fun HubDashboard(
     credentialStore: SecureCredentialStore,
     hubConfigStore: HubConfigStore,
     onStart: () -> Unit,
@@ -91,155 +111,350 @@ private fun HubControlScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isRunning by remember { mutableStateOf(isServiceRunning(context)) }
+    var tick by remember { mutableStateOf(0L) }
+    var showSettings by remember { mutableStateOf(false) }
 
-    // Poll service state every 2 seconds so the UI reflects actual state
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    // Poll service state + live data every 2 seconds
+    LaunchedEffect(Unit) {
         while (true) {
             isRunning = isServiceRunning(context)
+            tick = System.currentTimeMillis()
             kotlinx.coroutines.delay(2000)
         }
     }
 
+    val timeFmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // ── Header ──
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "HomeAssist Hub",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = timeFmt.format(Date(tick)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                StatusBadge(isRunning)
+            }
+        }
+
+        // ── Service controls ──
+        item {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Szolgáltatás", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onStart, enabled = !isRunning) {
+                            Text("Start")
+                        }
+                        Button(onClick = onStop, enabled = isRunning) {
+                            Text("Stop")
+                        }
+                        Button(onClick = onRestartService, enabled = isRunning) {
+                            Text("Restart")
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Live P1 Meter ──
+        item { P1StatusCard(tick) }
+
+        // ── Live Inverter ──
+        item { InverterStatusCard(tick) }
+
+        // ── Cloud Sync ──
+        item { CloudSyncCard(hubConfigStore, tick) }
+
+        // ── Config ──
+        item {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Konfiguráció", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Button(onClick = { showSettings = !showSettings }) {
+                            Text(if (showSettings) "Elrejt" else "Szerkeszt")
+                        }
+                    }
+                    val hubConfig = hubConfigStore.getConfig()
+                    Text("Relé: ${hubConfig?.relayUrl ?: "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Home ID: ${hubConfig?.homeId ?: "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Kiosk: ${if (hubConfig?.kioskUrl.isNullOrBlank()) "—" else "✓"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Token: ${if (hubConfig?.syncToken.isNullOrBlank()) "—" else hubConfig!!.syncToken.take(8) + "…"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                    if (showSettings) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        P1ConfigSection(credentialStore, onRestartService)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        CloudSyncConfigSection(hubConfigStore)
+                    }
+                }
+            }
+        }
+
+        // ── Log viewer ──
+        item { LogViewerCard(tick) }
+    }
+}
+
+@Composable
+private fun StatusBadge(isRunning: Boolean) {
+    val color = if (isRunning) Color(0xFF4CAF50) else Color(0xFFF44336)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
+        Text(
+            text = if (isRunning) "Fut" else "Leállítva",
+            style = MaterialTheme.typography.labelLarge,
+            color = color,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun P1StatusCard(tick: Long) {
+    val snap = P1HistoryBuffer.latestSnapshot
+    val (dailyImport, dailyExport) = P1HistoryBuffer.getDailyKwhDeltas()
+    val hasData = snap != null
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("P1 Smart Meter", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            if (hasData) {
+                val netGrid = snap!!.powerImportW - snap.powerExportW
+                InfoRow("Import", "${snap.powerImportW.toInt()} W")
+                InfoRow("Export", "${snap.powerExportW.toInt()} W")
+                InfoRow("Net grid", "${netGrid.toInt()} W")
+                InfoRow("Napi import", "${"%.2f".format(dailyImport)} kWh")
+                InfoRow("Napi export", "${"%.2f".format(dailyExport)} kWh")
+            } else {
+                Text("Nincs adat", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun InverterStatusCard(tick: Long) {
+    val isFresh = InverterLiveData.isFresh()
+    val power = InverterLiveData.activePowerW
+    val daily = InverterLiveData.dailyEnergyKwh
+    val consumption = InverterLiveData.realConsumptionW
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Huawei Inverter (Kiosk)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            if (isFresh) {
+                InfoRow("Termelés", "${power.toInt()} W")
+                InfoRow("Napi yield", "${"%.2f".format(daily)} kWh")
+                InfoRow("Ház fogyasztás", "${consumption.toInt()} W")
+            } else {
+                Text("Nincs friss adat ( >30 min )", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CloudSyncCard(hubConfigStore: HubConfigStore, tick: Long) {
+    val lastSync = hubConfigStore.getLastSyncTime()
+    val cursor = hubConfigStore.getSyncCursor()
+    val syncAge = if (lastSync > 0) {
+        val secs = (System.currentTimeMillis() - lastSync) / 1000
+        when {
+            secs < 60 -> "${secs}s ezelőtt"
+            secs < 3600 -> "${secs / 60}p ezelőtt"
+            else -> "${secs / 3600}ó ezelőtt"
+        }
+    } else "soha"
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Cloud Sync (Render/MongoDB)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            InfoRow("Utolsó sync", syncAge)
+            InfoRow("Cursor", if (cursor > 0) "${cursor}" else "—")
+            val isStale = lastSync > 0 && (System.currentTimeMillis() - lastSync) > 5 * 60 * 1000L
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (isStale) Color(0xFFFF9800) else Color(0xFF4CAF50)))
+                Text(if (isStale) "Késés" else "OK", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogViewerCard(tick: Long) {
+    val entries = remember(tick) { HubLogBuffer.latestEntries }
+    val timeFmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Log", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF00FF00))
+                Text("${entries.size} bejegyzés", style = MaterialTheme.typography.labelSmall, color = Color(0xFF888888))
+            }
+            if (entries.isEmpty()) {
+                Text("(üres)", style = MaterialTheme.typography.bodySmall, color = Color(0xFF666666))
+            } else {
+                entries.takeLast(50).reversed().forEach { entry ->
+                    val levelColor = when (entry.level) {
+                        HubLogBuffer.Level.ERROR -> Color(0xFFFF4444)
+                        HubLogBuffer.Level.WARN -> Color(0xFFFFAA00)
+                        HubLogBuffer.Level.DEBUG -> Color(0xFF666666)
+                        HubLogBuffer.Level.INFO -> Color(0xFFCCCCCC)
+                    }
+                    Text(
+                        text = "${timeFmt.format(Date(entry.timestamp))} ${entry.level.label}/${entry.tag}: ${entry.message}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = levelColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun P1ConfigSection(credentialStore: SecureCredentialStore, onRestartService: () -> Unit) {
     val existingCredential = credentialStore.getCredential("p1_meter")
     var ipText by remember { mutableStateOf(existingCredential?.ipAddress ?: "") }
     var portText by remember { mutableStateOf(existingCredential?.port?.toString() ?: "8989") }
     var savedMessage by remember { mutableStateOf<String?>(null) }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = if (isRunning) stringResource(R.string.service_running) else stringResource(R.string.service_stopped),
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                onStart()
-                isRunning = true
-            }) {
-                Text(text = stringResource(R.string.start_service))
-            }
-            Button(onClick = {
-                onStop()
-                isRunning = false
-            }) {
-                Text(text = stringResource(R.string.stop_service))
-            }
+    Text("P1 Smart Meter", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+    OutlinedTextField(
+        value = ipText,
+        onValueChange = { ipText = it },
+        label = { Text("IP cím") },
+        placeholder = { Text("192.168.0.148") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = portText,
+        onValueChange = { portText = it.filter { c -> c.isDigit() } },
+        label = { Text("Port") },
+        placeholder = { Text("8989") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Button(onClick = {
+        val ip = ipText.trim()
+        val port = portText.trim().toIntOrNull() ?: 8989
+        if (ip.isEmpty()) {
+            savedMessage = "IP cím megadása kötelező!"
+            return@Button
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "P1 Smart Meter beállítás",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        OutlinedTextField(
-            value = ipText,
-            onValueChange = { ipText = it },
-            label = { Text("IP cím") },
-            placeholder = { Text("192.168.0.148") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = portText,
-            onValueChange = { portText = it.filter { c -> c.isDigit() } },
-            label = { Text("Port") },
-            placeholder = { Text("8989") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Button(onClick = {
-            val ip = ipText.trim()
-            val port = portText.trim().toIntOrNull() ?: 8989
-            if (ip.isEmpty()) {
-                savedMessage = "IP cím megadása kötelező!"
-                return@Button
-            }
-            credentialStore.saveCredential(
-                DeviceCredential(
-                    deviceId = "p1_meter",
-                    deviceType = "p1_meter",
-                    ipAddress = ip,
-                    port = port,
-                    username = "",
-                    password = ""
-                )
+        credentialStore.saveCredential(
+            DeviceCredential(
+                deviceId = "p1_meter",
+                deviceType = "p1_meter",
+                ipAddress = ip,
+                port = port,
+                username = "",
+                password = ""
             )
-            savedMessage = "P1 meter elmentve! Szolgáltatás újraindítása..."
-            onRestartService()
-            isRunning = true
-        }) {
-            Text("Mentés és szolgáltatás újraindítása")
-        }
-
-        savedMessage?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Cloud Sync",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
         )
+        savedMessage = "Mentve! Szolgáltatás újraindítása..."
+        onRestartService()
+    }) {
+        Text("Mentés és restart")
+    }
+    savedMessage?.let {
+        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+    }
+}
 
-        val hubConfig = hubConfigStore.getConfig()
-        Text(
-            text = "Relé URL: ${hubConfig?.relayUrl ?: "nincs beállítva"}",
-            style = MaterialTheme.typography.bodySmall
+@Composable
+private fun CloudSyncConfigSection(hubConfigStore: HubConfigStore) {
+    val hubConfig = hubConfigStore.getConfig()
+    var relayUrl by remember { mutableStateOf(hubConfig?.relayUrl ?: "") }
+    var homeId by remember { mutableStateOf(hubConfig?.homeId ?: "") }
+    var kioskUrl by remember { mutableStateOf(hubConfig?.kioskUrl ?: "") }
+    var syncToken by remember { mutableStateOf(hubConfig?.syncToken ?: "") }
+    var savedMessage by remember { mutableStateOf<String?>(null) }
+
+    Text("Cloud Sync", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+    OutlinedTextField(
+        value = relayUrl,
+        onValueChange = { relayUrl = it },
+        label = { Text("Relé URL") },
+        placeholder = { Text("https://homeassisthub.onrender.com") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = homeId,
+        onValueChange = { homeId = it },
+        label = { Text("Home ID") },
+        placeholder = { Text("home1") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = kioskUrl,
+        onValueChange = { kioskUrl = it },
+        label = { Text("Kiosk URL") },
+        placeholder = { Text("https://uni002eu5.fusionsolar.huawei.com/...") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Button(onClick = {
+        hubConfigStore.saveConfig(
+            com.homeassisthub.hub.data.HubConfig(
+                relayUrl = relayUrl.trim(),
+                homeId = homeId.trim(),
+                kioskUrl = kioskUrl.trim(),
+                syncToken = syncToken
+            )
         )
-        Text(
-            text = "Home ID: ${hubConfig?.homeId ?: "nincs beállítva"}",
-            style = MaterialTheme.typography.bodySmall
-        )
-
-        var syncToken by remember { mutableStateOf(hubConfig?.syncToken ?: "") }
-
-        if (syncToken.isNotBlank()) {
-            Text(
-                text = "Sync Token:",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = syncToken,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "Másold be ezt a tokent a Kliens Beállításokba.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary
-            )
-        }
-
-        Button(onClick = {
-            syncToken = hubConfigStore.generateSyncToken()
-            savedMessage = "Új sync token generálva!"
-        }) {
-            Text(if (syncToken.isBlank()) "Sync token generálása" else "Új token generálása")
-        }
+        savedMessage = "Mentve!"
+    }) {
+        Text("Mentés")
+    }
+    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+    if (syncToken.isNotBlank()) {
+        Text("Sync Token:", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+        Text(syncToken, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+        Text("Másold be a Kliens Beállításokba.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+    }
+    Button(onClick = {
+        syncToken = hubConfigStore.generateSyncToken()
+        savedMessage = "Új sync token generálva!"
+    }) {
+        Text(if (syncToken.isBlank()) "Token generálása" else "Új token")
+    }
+    savedMessage?.let {
+        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
     }
 }
 

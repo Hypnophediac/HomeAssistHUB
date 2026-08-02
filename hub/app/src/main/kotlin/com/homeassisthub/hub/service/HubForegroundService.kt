@@ -388,6 +388,7 @@ class HubForegroundService : Service() {
             }
             inverterDailySummaryDao.upsert(InverterDailySummary(date = dateStr, producedKwh = lastKwh))
             Log.i(TAG, "Inverter daily summary for $dateStr: produced=${"%.3f".format(lastKwh)} kWh")
+            com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Inverter daily for $dateStr: produced=${"%.3f".format(lastKwh)} kWh")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to compute inverter daily summary for $dateStr", e)
         }
@@ -401,6 +402,7 @@ class HubForegroundService : Service() {
             val invSummary = inverterDailySummaryDao.getByDate(dateStr)
             val producedKwh = invSummary?.producedKwh ?: 0.0
             val stats = com.homeassisthub.hub.data.db.DailyStatsCalculator.compute(rawReadings, producedKwh)
+            com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Daily summary for $dateStr: consumed=${"%.3f".format(stats.totalConsumedKwh)} kWh, exported=${"%.3f".format(stats.totalExportedKwh)} kWh, selfCons=${"%.1f".format(stats.selfConsumptionRatio * 100)}%", )
 
             p1DailySummaryDao.upsert(P1DailySummary(
                 date = dateStr,

@@ -151,6 +151,7 @@ class P1MeterController(
                 Log.i(TAG, "P1 reading: power=${entity.powerW}W voltage=${entity.voltageV}V " +
                     "impL1=${entity.powerImportL1W}W impL2=${entity.powerImportL2W}W impL3=${entity.powerImportL3W}W " +
                     "expL1=${entity.powerExportL1W}W expL2=${entity.powerExportL2W}W expL3=${entity.powerExportL3W}W")
+                com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "P1: ${entity.powerW.toInt()}W imp=${entity.powerImportW.toInt()}W exp=${entity.powerExportW.toInt()}W")
                 CommandResult.Success(
                     mapOf(
                         "timestamp" to entity.timestamp,
