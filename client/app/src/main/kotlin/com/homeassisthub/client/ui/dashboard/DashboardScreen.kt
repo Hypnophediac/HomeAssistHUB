@@ -2,7 +2,7 @@ package com.homeassisthub.client.ui.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ElectricalServices
@@ -448,7 +449,6 @@ private fun PlugCard(
 
 @Composable
 private fun P1HistoryChart(readings: List<P1ReadingDto>) {
-    // Filter to today's readings only
     val cal = java.util.Calendar.getInstance()
     cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
     cal.set(java.util.Calendar.MINUTE, 0)
@@ -471,146 +471,124 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
     val exportColor = Color(0xFF22C55E)
     val inverterColor = Color(0xFFF59E0B)
     val consumptionColor = Color(0xFF3B82F6)
-
     val niceMax = 5000f
+    val dayMs = 86_400_000L
 
-    // Zoom state: 1x = fit screen, up to 4x
+    // Pan (one finger) + zoom (two fingers) state
     var zoomLevel by remember { mutableFloatStateOf(1f) }
-    val scrollState = androidx.compose.foundation.rememberScrollState()
+    var panOffsetPx by remember { mutableFloatStateOf(0f) }
 
-    Column {
-        // Zoom controls
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Zoom: ${zoomLevel.toInt()}x",
-                style = MaterialTheme.typography.labelSmall,
-                color = labelColor
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .padding(top = 8.dp)
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    zoomLevel = (zoomLevel * zoom).coerceIn(1f, 6f)
+                    panOffsetPx += pan.x
+                }
+            }
+    ) {
+        val canvasW = size.width
+        val labelW = yLabelWidthPx
+        val xLabelH = xLabelHeightPx
+        val chartW = (canvasW - labelW) * zoomLevel
+        val chartH = size.height - xLabelH
+
+        // Clamp pan so we don't scroll beyond the data
+        val maxPan = (chartW - (canvasW - labelW)).coerceAtLeast(0f)
+        val effectivePan = panOffsetPx.coerceIn(-maxPan, 0f)
+
+        // Y-axis grid + labels (fixed, not affected by pan/zoom)
+        val yPaint = android.graphics.Paint().apply {
+            color = labelColor.toArgb()
+            textSize = axisFontSizePx
+            textAlign = android.graphics.Paint.Align.RIGHT
+            isAntiAlias = true
+        }
+        val gridSteps = 4
+        for (i in 0..gridSteps) {
+            val y = chartH - (chartH * i / gridSteps)
+            val value = niceMax * i / gridSteps
+            drawLine(
+                color = gridColor,
+                start = Offset(labelW, y),
+                end = Offset(canvasW, y),
+                strokeWidth = 1f
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            FilledIconButton(
-                onClick = { zoomLevel = (zoomLevel - 1f).coerceIn(1f, 4f) },
-                modifier = Modifier.size(28.dp)
-            ) {
-                Text("−", style = MaterialTheme.typography.labelMedium)
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            FilledIconButton(
-                onClick = { zoomLevel = (zoomLevel + 1f).coerceIn(1f, 4f) },
-                modifier = Modifier.size(28.dp)
-            ) {
-                Text("+", style = MaterialTheme.typography.labelMedium)
+            drawContext.canvas.nativeCanvas.drawText(
+                String.format(java.util.Locale.US, "%.0f", value),
+                labelW - yLabelPaddingPx,
+                y + axisFontSizePx / 3f,
+                yPaint
+            )
+        }
+
+        drawLine(color = axisColor, start = Offset(labelW, 0f), end = Offset(labelW, chartH), strokeWidth = 1.5f)
+        drawLine(color = axisColor, start = Offset(labelW, chartH), end = Offset(canvasW, chartH), strokeWidth = 1.5f)
+
+        // Clip chart area for pan/zoom
+        drawContext.canvas.nativeCanvas.save()
+        drawContext.canvas.nativeCanvas.clipRect(labelW, 0f, canvasW, chartH)
+
+        // X-axis: vertical hour grid lines + labels
+        val xPaint = android.graphics.Paint().apply {
+            color = labelColor.toArgb()
+            textSize = axisFontSizePx
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+        for (hour in 0..24 step 2) {
+            val x = labelW + (hour * 3_600_000L).toFloat() / dayMs * chartW + effectivePan
+            if (x >= labelW && x <= canvasW) {
+                drawLine(
+                    color = gridColor,
+                    start = Offset(x, 0f),
+                    end = Offset(x, chartH),
+                    strokeWidth = 1f
+                )
+                drawContext.canvas.nativeCanvas.drawText(
+                    "%02d:00".format(hour),
+                    x,
+                    chartH + xLabelH - yLabelPaddingPx,
+                    xPaint
+                )
             }
         }
 
-        // Horizontally scrollable chart
-        androidx.compose.foundation.layout.BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            val screenW = maxWidth
-            val chartWidthDp = with(density) { (yLabelWidthPx + (screenW.toPx() - yLabelWidthPx) * zoomLevel).toDp() }
-            Canvas(
-                modifier = Modifier
-                    .width(chartWidthDp)
-                    .height(200.dp)
-                    .padding(top = 8.dp)
-                    .horizontalScroll(scrollState)
-            ) {
-                val canvasW = size.width
-                val labelW = yLabelWidthPx
-                val xLabelH = xLabelHeightPx
-                val chartW = canvasW - labelW
-                val chartH = size.height - xLabelH
-
-                // X-axis: 0:00 to 24:00 = 86400000 ms
-                val dayMs = 86_400_000L
-
-                // Hourly grid lines + labels (0, 2, 4, ... 24)
-                val yPaint = android.graphics.Paint().apply {
-                    color = labelColor.toArgb()
-                    textSize = axisFontSizePx
-                    textAlign = android.graphics.Paint.Align.RIGHT
-                    isAntiAlias = true
-                }
-                val gridSteps = 4
-                for (i in 0..gridSteps) {
-                    val y = chartH - (chartH * i / gridSteps)
-                    val value = niceMax * i / gridSteps
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(labelW, y),
-                        end = Offset(canvasW, y),
-                        strokeWidth = 1f
-                    )
-                    drawContext.canvas.nativeCanvas.drawText(
-                        String.format(java.util.Locale.US, "%.0f", value),
-                        labelW - yLabelPaddingPx,
-                        y + axisFontSizePx / 3f,
-                        yPaint
-                    )
-                }
-
-                drawLine(color = axisColor, start = Offset(labelW, 0f), end = Offset(labelW, chartH), strokeWidth = 1.5f)
-                drawLine(color = axisColor, start = Offset(labelW, chartH), end = Offset(canvasW, chartH), strokeWidth = 1.5f)
-
-                // Vertical hour grid lines + X labels
-                val xPaint = android.graphics.Paint().apply {
-                    color = labelColor.toArgb()
-                    textSize = axisFontSizePx
-                    textAlign = android.graphics.Paint.Align.CENTER
-                    isAntiAlias = true
-                }
-                for (hour in 0..24 step 2) {
-                    val x = labelW + (hour * 3_600_000L).toFloat() / dayMs * chartW
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(x, 0f),
-                        end = Offset(x, chartH),
-                        strokeWidth = 1f
-                    )
-                    drawContext.canvas.nativeCanvas.drawText(
-                        "%02d:00".format(hour),
-                        x,
-                        chartH + xLabelH - yLabelPaddingPx,
-                        xPaint
-                    )
-                }
-
-                // Map each reading to X position based on time-of-day
-                fun timeToX(ts: Long): Float {
-                    val msIntoDay = ts - midnightMs
-                    return labelW + msIntoDay.toFloat() / dayMs * chartW
-                }
-
-                fun drawLineSeries(series: (P1ReadingDto) -> Float, color: Color) {
-                    if (todayReadings.size < 2) return
-                    val paint = android.graphics.Paint().apply {
-                        this.color = color.toArgb()
-                        isAntiAlias = true
-                        style = android.graphics.Paint.Style.STROKE
-                        strokeWidth = 2f
-                    }
-                    val path = android.graphics.Path()
-                    for (i in todayReadings.indices) {
-                        val r = todayReadings[i]
-                        val x = timeToX(r.timestamp)
-                        val y = chartH - (series(r) / niceMax * chartH)
-                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                    }
-                    drawContext.canvas.nativeCanvas.drawPath(path, paint)
-                }
-
-                drawLineSeries({ it.powerImportW.toFloat() }, importColor)
-                drawLineSeries({ it.powerExportW.toFloat() }, exportColor)
-                drawLineSeries({ it.inverterPowerW.toFloat() }, inverterColor)
-                drawLineSeries({
-                    maxOf(0f, it.inverterPowerW.toFloat() + it.powerImportW.toFloat() - it.powerExportW.toFloat())
-                }, consumptionColor)
-            }
+        // Map reading timestamp to X position
+        fun timeToX(ts: Long): Float {
+            val msIntoDay = ts - midnightMs
+            return labelW + msIntoDay.toFloat() / dayMs * chartW + effectivePan
         }
+
+        fun drawLineSeries(series: (P1ReadingDto) -> Float, color: Color) {
+            if (todayReadings.size < 2) return
+            val paint = android.graphics.Paint().apply {
+                this.color = color.toArgb()
+                isAntiAlias = true
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 2f
+            }
+            val path = android.graphics.Path()
+            for (i in todayReadings.indices) {
+                val r = todayReadings[i]
+                val x = timeToX(r.timestamp)
+                val y = chartH - (series(r) / niceMax * chartH)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            drawContext.canvas.nativeCanvas.drawPath(path, paint)
+        }
+
+        drawLineSeries({ it.powerImportW.toFloat() }, importColor)
+        drawLineSeries({ it.powerExportW.toFloat() }, exportColor)
+        drawLineSeries({ it.inverterPowerW.toFloat() }, inverterColor)
+        drawLineSeries({
+            maxOf(0f, it.inverterPowerW.toFloat() + it.powerImportW.toFloat() - it.powerExportW.toFloat())
+        }, consumptionColor)
+
+        drawContext.canvas.nativeCanvas.restore()
     }
 }
 
