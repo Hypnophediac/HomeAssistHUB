@@ -4,6 +4,8 @@ import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import android.app.ActivityManager
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,19 +53,20 @@ class MainActivity : ComponentActivity() {
         ContextCompat.startForegroundService(this, HubForegroundService.startIntent(this))
 
         val credentialStore = SecureCredentialStore(this)
+        val activity = this
 
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     HubControlScreen(
                         credentialStore = credentialStore,
-                        hubConfigStore = HubConfigStore(this),
-                        onStart = { ContextCompat.startForegroundService(this, HubForegroundService.startIntent(this)) },
-                        onStop = { startService(HubForegroundService.stopIntent(this)) },
+                        hubConfigStore = HubConfigStore(activity),
+                        onStart = { ContextCompat.startForegroundService(activity, HubForegroundService.startIntent(activity)) },
+                        onStop = { activity.startService(HubForegroundService.stopIntent(activity)) },
                         onRestartService = {
-                            startService(HubForegroundService.stopIntent(this))
+                            activity.startService(HubForegroundService.stopIntent(activity))
                             Thread.sleep(500)
-                            ContextCompat.startForegroundService(this, HubForegroundService.startIntent(this))
+                            ContextCompat.startForegroundService(activity, HubForegroundService.startIntent(activity))
                         }
                     )
                 }
@@ -86,7 +89,16 @@ private fun HubControlScreen(
     onStop: () -> Unit,
     onRestartService: () -> Unit
 ) {
-    var isRunning by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var isRunning by remember { mutableStateOf(isServiceRunning(context)) }
+
+    // Poll service state every 2 seconds so the UI reflects actual state
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            isRunning = isServiceRunning(context)
+            kotlinx.coroutines.delay(2000)
+        }
+    }
 
     val existingCredential = credentialStore.getCredential("p1_meter")
     var ipText by remember { mutableStateOf(existingCredential?.ipAddress ?: "") }
@@ -229,4 +241,11 @@ private fun HubControlScreen(
             Text(if (syncToken.isBlank()) "Sync token generálása" else "Új token generálása")
         }
     }
+}
+
+private fun isServiceRunning(context: android.content.Context): Boolean {
+    val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    @Suppress("DEPRECATION")
+    val services = manager.getRunningServices(Int.MAX_VALUE)
+    return services.any { it.service.className == "com.homeassisthub.hub.service.HubForegroundService" }
 }
