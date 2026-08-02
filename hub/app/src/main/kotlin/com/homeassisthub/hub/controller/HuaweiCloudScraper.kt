@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit
  */
 class HuaweiCloudScraper(
     private val scope: CoroutineScope,
-    private val pollIntervalMs: Long = 300_000L // 5 minutes
+    private val pollIntervalMs: Long = 60_000L // 1 minute
 ) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
