@@ -63,6 +63,7 @@ class P1MeterController(
                     error("HTTP ${response.code} from P1 meter")
                 }
                 val body = response.body?.string().orEmpty()
+                Log.i(TAG, "P1 raw JSON: $body")
                 val parsed = adapter.fromJson(body) ?: error("Empty/invalid P1 meter response")
 
                 val ts = System.currentTimeMillis()
@@ -147,7 +148,9 @@ class P1MeterController(
             }
         }.fold(
             onSuccess = { entity ->
-                Log.i(TAG, "P1 reading: power=${entity.powerW}W voltage=${entity.voltageV}V")
+                Log.i(TAG, "P1 reading: power=${entity.powerW}W voltage=${entity.voltageV}V " +
+                    "impL1=${entity.powerImportL1W}W impL2=${entity.powerImportL2W}W impL3=${entity.powerImportL3W}W " +
+                    "expL1=${entity.powerExportL1W}W expL2=${entity.powerExportL2W}W expL3=${entity.powerExportL3W}W")
                 CommandResult.Success(
                     mapOf(
                         "timestamp" to entity.timestamp,
