@@ -1,6 +1,8 @@
 package com.homeassisthub.client.ui.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ElectricalServices
@@ -35,7 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -469,21 +475,36 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         maxOf(0f, it.inverterPowerW.toFloat() + it.powerImportW.toFloat() - it.powerExportW.toFloat())
     }
 
-    val allValues = importSeries + exportSeries + inverterSeries + consumptionSeries
-    val maxVal = (allValues.maxOrNull() ?: 1f).coerceAtLeast(1f)
-    val niceMax = maxVal * 1.15f
+    // Fixed Y-scale: 5kW = inverter max capacity
+    val niceMax = 5000f
 
-    androidx.compose.foundation.Canvas(
+    // Pan/zoom state
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val transformState = Modifier.pointerInput(Unit) {
+        detectTransformGestures { _, pan, zoom, _ ->
+            scale = (scale * zoom).coerceIn(1f, 5f)
+            offsetX = (offsetX + pan.x).coerceIn(0f, 10000f)
+        }
+    }
+
+    Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(200.dp)
             .padding(top = 8.dp)
+            .then(transformState)
     ) {
         val canvasW = size.width
         val labelW = yLabelWidthPx
         val xLabelH = xLabelHeightPx
         val chartW = canvasW - labelW
         val chartH = size.height - xLabelH
+
+        // Apply zoom: visible window shrinks/grows
+        val visibleW = chartW / scale
+        val maxOffset = (chartW - visibleW).coerceAtLeast(0f)
+        val effectiveOffsetX = if (scale > 1f) offsetX.coerceIn(0f, maxOffset) else 0f
 
         val gridSteps = 4
         val yPaint = android.graphics.Paint().apply {
@@ -514,6 +535,10 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
 
         val stepX = if (chartReadings.size > 1) chartW / (chartReadings.size - 1) else chartW
 
+        // Clip to visible area for pan/zoom
+        drawContext.canvas.nativeCanvas.save()
+        drawContext.canvas.nativeCanvas.clipRect(labelW, 0f, canvasW, chartH)
+
         fun drawLineSeries(series: List<Float>, color: Color) {
             if (series.size < 2) return
             val paint = android.graphics.Paint().apply {
@@ -524,7 +549,7 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
             }
             val path = android.graphics.Path()
             for (i in series.indices) {
-                val x = labelW + i * stepX
+                val x = labelW + i * stepX - effectiveOffsetX
                 val y = chartH - (series[i] / niceMax * chartH)
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
@@ -536,6 +561,8 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         drawLineSeries(inverterSeries, inverterColor)
         drawLineSeries(consumptionSeries, consumptionColor)
 
+        drawContext.canvas.nativeCanvas.restore()
+
         val xPaint = android.graphics.Paint().apply {
             color = labelColor.toArgb()
             textSize = axisFontSizePx
@@ -544,13 +571,15 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         }
         for (i in chartReadings.indices) {
             if (i % labelEvery == 0) {
-                val x = labelW + i * stepX
-                drawContext.canvas.nativeCanvas.drawText(
-                    timeLabels[i],
-                    x,
-                    chartH + xLabelH - yLabelPaddingPx,
-                    xPaint
-                )
+                val x = labelW + i * stepX - effectiveOffsetX
+                if (x >= labelW && x <= canvasW) {
+                    drawContext.canvas.nativeCanvas.drawText(
+                        timeLabels[i],
+                        x,
+                        chartH + xLabelH - yLabelPaddingPx,
+                        xPaint
+                    )
+                }
             }
         }
     }
