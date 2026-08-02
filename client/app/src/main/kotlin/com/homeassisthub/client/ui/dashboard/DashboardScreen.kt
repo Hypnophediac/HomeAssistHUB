@@ -532,15 +532,26 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         drawContext.canvas.nativeCanvas.save()
         drawContext.canvas.nativeCanvas.clipRect(labelW, 0f, canvasW, chartH)
 
-        // X-axis: vertical hour grid lines + labels
+        // X-axis: dynamic grid lines + labels based on zoom level
         val xPaint = android.graphics.Paint().apply {
             color = labelColor.toArgb()
             textSize = axisFontSizePx
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
         }
-        for (hour in 0..24 step 2) {
-            val x = labelW + (hour * 3_600_000L).toFloat() / dayMs * chartW + effectivePan
+        // Choose label interval based on zoom: 1x=2h, 2x=1h, 3x=30min, 4x+=10min
+        val labelStepMinutes = when {
+            zoomLevel >= 4f -> 10
+            zoomLevel >= 3f -> 30
+            zoomLevel >= 2f -> 60
+            else -> 120
+        }
+        val totalMinutes = 24 * 60
+        // Draw vertical grid lines inside clip
+        var minute = 0
+        while (minute <= totalMinutes) {
+            val ms = minute * 60_000L
+            val x = labelW + ms.toFloat() / dayMs * chartW + effectivePan
             if (x >= labelW && x <= canvasW) {
                 drawLine(
                     color = gridColor,
@@ -548,13 +559,8 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
                     end = Offset(x, chartH),
                     strokeWidth = 1f
                 )
-                drawContext.canvas.nativeCanvas.drawText(
-                    "%02d:00".format(hour),
-                    x,
-                    chartH + xLabelH - yLabelPaddingPx,
-                    xPaint
-                )
             }
+            minute += labelStepMinutes
         }
 
         // Map reading timestamp to X position
@@ -589,6 +595,25 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         }, consumptionColor)
 
         drawContext.canvas.nativeCanvas.restore()
+
+        // Draw X-axis time labels after restore (outside clip so always visible)
+        minute = 0
+        while (minute <= totalMinutes) {
+            val ms = minute * 60_000L
+            val x = labelW + ms.toFloat() / dayMs * chartW + effectivePan
+            if (x >= labelW && x <= canvasW) {
+                val h = minute / 60
+                val m = minute % 60
+                val label = if (m == 0) "%02d:00".format(h) else "%02d:%02d".format(h, m)
+                drawContext.canvas.nativeCanvas.drawText(
+                    label,
+                    x,
+                    chartH + xLabelH - yLabelPaddingPx,
+                    xPaint
+                )
+            }
+            minute += labelStepMinutes
+        }
     }
 }
 
