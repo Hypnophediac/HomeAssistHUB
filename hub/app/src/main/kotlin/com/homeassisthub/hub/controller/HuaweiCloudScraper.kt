@@ -51,8 +51,20 @@ class HuaweiCloudScraper(
         pollJob = scope.launch {
             Log.i(TAG, "Starting Kiosk scraper for ${parsed.domain}, kk=${parsed.kk.take(8)}...")
             while (isActive) {
-                runCatching { scrapeOnce(parsed) }
-                    .onFailure { Log.w(TAG, "Scrape failed: ${it.message}") }
+                var success = false
+                for (attempt in 1..3) {
+                    if (!isActive) break
+                    val result = runCatching { scrapeOnce(parsed) }
+                    if (result.isSuccess) {
+                        success = true
+                        break
+                    }
+                    Log.w(TAG, "Scrape attempt $attempt/3 failed: ${result.exceptionOrNull()?.message}")
+                    if (attempt < 3) delay(15_000L)
+                }
+                if (!success) {
+                    Log.w(TAG, "All 3 scrape attempts failed, waiting for next poll cycle")
+                }
                 delay(pollIntervalMs)
             }
         }
