@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.homeassisthub.client.R
 import com.homeassisthub.client.network.model.P1ReadingDto
+import com.homeassisthub.client.network.model.LivePowerData
 import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.ui.components.FreshnessBadge
 import com.homeassisthub.client.util.formatKwh
@@ -59,6 +60,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
     val plugs by viewModel.plugs.collectAsState()
     val plugStates by viewModel.plugStates.collectAsState()
     val p1History by viewModel.p1History.collectAsState()
+    val livePower by viewModel.livePower.collectAsState()
     val dailySummary by viewModel.dailySummary.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
 
@@ -85,7 +87,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
         }
 
         item {
-            P1PowerCard(readings = p1History)
+            P1PowerCard(readings = p1History, livePower = livePower)
         }
 
         dailySummary?.let { summary ->
@@ -208,7 +210,7 @@ private fun StatusBanner(message: String) {
 }
 
 @Composable
-private fun P1PowerCard(readings: List<P1ReadingDto>) {
+private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -261,35 +263,32 @@ private fun P1PowerCard(readings: List<P1ReadingDto>) {
                 }
             } else {
                 Spacer(modifier = Modifier.height(12.dp))
-                val latest = readings.last()
+                val lp = livePower
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     StatChip(
                         label = "Napelem Termelés",
-                        value = if (latest.inverterPowerW > 0.0) {
-                            formatW(latest.inverterPowerW)
+                        value = if (lp != null && lp.inverterPowerW > 0.0) {
+                            formatW(lp.inverterPowerW)
                         } else {
                             "— W"
                         },
                         color = Color(0xFFF59E0B)
                     )
-                    val isExporting = latest.powerExportW > latest.powerImportW
-                    val netPowerW = kotlin.math.abs(latest.powerImportW - latest.powerExportW)
                     StatChip(
-                        label = if (isExporting) "Betáplálás" else "Vételezés",
-                        value = if (netPowerW > 0) formatW(netPowerW) else "— W",
-                        color = if (isExporting) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                        label = if (lp != null && lp.exportW > 0) "Betáplálás" else "Vételezés",
+                        value = if (lp != null) {
+                            val net = if (lp.exportW > 0) lp.exportW else lp.importW
+                            if (net > 0) formatW(net) else "— W"
+                        } else "— W",
+                        color = if (lp != null && lp.exportW > 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
                     )
-                    val hasInverter = latest.inverterPowerW > 0.0
-                    val houseW = if (hasInverter) {
-                        maxOf(0.0, latest.inverterPowerW + latest.powerImportW - latest.powerExportW)
-                    } else 0.0
                     StatChip(
                         label = "Ház Fogyasztás",
-                        value = if (hasInverter) {
-                            formatW(houseW)
+                        value = if (lp != null && lp.hasInverter) {
+                            formatW(lp.houseW)
                         } else {
                             "— W"
                         },
@@ -298,7 +297,11 @@ private fun P1PowerCard(readings: List<P1ReadingDto>) {
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Feszültség: %.0f / %.0f / %.0f V".format(latest.l1V, latest.l2V, latest.l3V),
+                    text = if (lp != null) {
+                        "Feszültség: %.0f / %.0f / %.0f V".format(lp.l1V, lp.l2V, lp.l3V)
+                    } else {
+                        "Feszültség: — / — / — V"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
