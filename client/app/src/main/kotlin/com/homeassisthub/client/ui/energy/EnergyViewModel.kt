@@ -148,12 +148,13 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
         fetchPvForecast()
     }
 
-    /** Starts a 2-second polling loop that fetches only the latest P1 reading
-     *  via Socket.IO, so the Élő Adatok card updates in near-real-time
-     *  instead of waiting for the Kiosk API's ~5 min cycle. */
+    /** Starts a 2-second polling loop that fetches the latest P1 reading
+     *  via Socket.IO, so the Élő Adatok card updates in near-real-time.
+     *  Every 30s also fetches the full 5-point history for the Energy screen. */
     fun startLivePolling() {
         pollingJob?.cancel()
         pollingJob = viewModelScope.launch(Dispatchers.IO) {
+            var tick = 0
             while (isActive) {
                 val config = configStore.getConfig()
                 if (config == null || config.syncToken.isBlank()) {
@@ -161,18 +162,23 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
                     continue
                 }
                 val manager = ensureSocketConnected(config)
+                val limit = if (tick % 15 == 0) "5" else "1"
                 runCatching {
-                    val resp = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to "1"))
+                    val resp = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to limit))
                     if (resp.optBoolean("success")) {
                         val readingsJson = resp.optJSONObject("data")?.optJSONArray("readings")
                         val readings = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
                         if (readings.isNotEmpty()) {
                             _livePower.value = LivePowerData.fromReading(readings.last())
+                            if (limit == "5") {
+                                _liveReadings.value = readings
+                            }
                         }
                     }
                 }.onFailure {
                     Log.w("EnergyVM", "Live poll failed: ${it.message}")
                 }
+                tick++
                 delay(2_000L)
             }
         }
