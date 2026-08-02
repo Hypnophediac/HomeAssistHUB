@@ -66,7 +66,7 @@ class HubForegroundService : Service() {
     private val discoveryManager by lazy { DiscoveryManager(applicationContext) }
     private val kioskScraper by lazy { HuaweiCloudScraper(serviceScope) }
     private val commandRouter by lazy { CommandRouter(credentialStore, controllerFactory, discoveryManager, p1Dao, p1RawDao, p1DailySummaryDao, inverterHistoryDao, hubConfigStore, kioskScraper, inverterDailySummaryDao) }
-    private val apiServer by lazy { HubApiServer(discoveryManager, credentialStore, p1Dao, p1RawDao, p1DailySummaryDao) }
+    private val apiServer by lazy { HubApiServer(discoveryManager, credentialStore, p1Dao, p1RawDao, p1DailySummaryDao, inverterDailySummaryDao) }
     private val cloudSyncManager by lazy { CloudSyncManager(hubConfigStore, p1RawDao, inverterHistoryDao, p1DailySummaryDao, inverterDailySummaryDao, serviceScope) }
 
     private var hubSocketClient: HubSocketClient? = null
@@ -398,7 +398,9 @@ class HubForegroundService : Service() {
             val (startMs, endMs) = dayRangeMillis(dateStr)
             val rawReadings = p1RawDao.getRange(startMs, endMs)
             if (rawReadings.isEmpty()) return
-            val stats = com.homeassisthub.hub.data.db.DailyStatsCalculator.compute(rawReadings)
+            val invSummary = inverterDailySummaryDao.getByDate(dateStr)
+            val producedKwh = invSummary?.producedKwh ?: 0.0
+            val stats = com.homeassisthub.hub.data.db.DailyStatsCalculator.compute(rawReadings, producedKwh)
 
             p1DailySummaryDao.upsert(P1DailySummary(
                 date = dateStr,

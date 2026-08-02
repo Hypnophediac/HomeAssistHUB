@@ -10,6 +10,7 @@ import com.homeassisthub.hub.api.dto.EnergyPeriodResponseDto
 import com.homeassisthub.hub.api.dto.toDomain
 import com.homeassisthub.hub.api.dto.toDto
 import com.homeassisthub.hub.api.dto.toSummaryDto
+import com.homeassisthub.hub.data.db.InverterDailySummaryDao
 import com.homeassisthub.hub.data.db.P1DailySummaryDao
 import com.homeassisthub.hub.data.db.P1Dao
 import com.homeassisthub.hub.data.db.P1RawDao
@@ -45,6 +46,7 @@ class HubApiServer(
     private val p1Dao: P1Dao,
     private val p1RawDao: P1RawDao,
     private val p1DailySummaryDao: P1DailySummaryDao,
+    private val inverterDailySummaryDao: InverterDailySummaryDao?,
     private val port: Int = DEFAULT_PORT
 ) {
 
@@ -134,7 +136,10 @@ class HubApiServer(
                     // ── Daily statistics computed live from today's raw readings ──
                     // (not from P1DailySummary, which is only persisted at midnight
                     // for the *previous* completed day and would always be empty for "today").
-                    val stats = com.homeassisthub.hub.data.db.DailyStatsCalculator.compute(rawReadings)
+                    val invDaily = inverterDailySummaryDao?.getByDate(today)
+                    val producedKwh = invDaily?.producedKwh
+                        ?: if (com.homeassisthub.hub.controller.InverterLiveData.isFresh()) com.homeassisthub.hub.controller.InverterLiveData.dailyEnergyKwh else 0.0
+                    val stats = com.homeassisthub.hub.data.db.DailyStatsCalculator.compute(rawReadings, producedKwh)
 
                     call.respond(EnergyDailyResponseDto(
                         hourly = hourly,

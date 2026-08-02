@@ -291,7 +291,10 @@ class CommandRouter(
             val latest = rawDao.getLatest()
             // Compute live from today's raw readings — the persisted P1DailySummary
             // is only written at midnight for the *previous* completed day.
-            val stats = com.homeassisthub.hub.data.db.DailyStatsCalculator.compute(rawReadings)
+            val invDaily = inverterDailySummaryDao?.getByDate(today)
+            val producedKwh = invDaily?.producedKwh
+                ?: if (com.homeassisthub.hub.controller.InverterLiveData.isFresh()) com.homeassisthub.hub.controller.InverterLiveData.dailyEnergyKwh else 0.0
+            val stats = com.homeassisthub.hub.data.db.DailyStatsCalculator.compute(rawReadings, producedKwh)
             CommandResult.Success(mapOf(
                 "hourly" to hourly,
                 "latestPowerW" to (latest?.currentPowerW ?: 0.0),

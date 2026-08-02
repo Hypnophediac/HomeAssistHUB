@@ -316,8 +316,11 @@ router.get("/:homeId/yearly", syncTokenAuth, async (req: Request & { homeId?: st
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     for (let m = 0; m < 12; m++) {
-      const startMs = new Date(year, m, 1).getTime();
-      const endMs = new Date(year, m + 1, 1).getTime();
+      const daysInMonth = new Date(year, m + 1, 0).getDate();
+      const monthStart = `${year}-${String(m + 1).padStart(2, "0")}-01`;
+      const monthEnd = `${year}-${String(m + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+      const [startMs] = dateRangeMillis(monthStart);
+      const [, endMs] = dateRangeMillis(monthEnd);
       const readings = await P1RawReading
         .find({ homeId, timestamp: { $gte: startMs, $lt: endMs } })
         .sort({ timestamp: 1 })
@@ -325,9 +328,6 @@ router.get("/:homeId/yearly", syncTokenAuth, async (req: Request & { homeId?: st
       const { consumed, exported } = computeDailyConsumedExported(readings);
 
       // Sum inverter daily summaries for this month
-      const monthStart = `${year}-${String(m + 1).padStart(2, "0")}-01`;
-      const daysInMonth = new Date(year, m + 1, 0).getDate();
-      const monthEnd = `${year}-${String(m + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
       const invSummaries = await InverterDailySummary
         .find({ homeId, date: { $gte: monthStart, $lte: monthEnd } })
         .lean();

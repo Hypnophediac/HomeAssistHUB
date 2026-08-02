@@ -40,8 +40,13 @@ object DailyStatsCalculator {
      * Computes all daily statistics from a chronologically-ordered list of
      * raw readings spanning (part of) a single day. Safe to call with a
      * partial day's worth of readings (e.g. "today so far").
+     *
+     * @param producedKwh Solar energy produced this day (from inverter daily
+     *                   summary or live Kiosk API). When available, enables
+     *                   correct selfConsumptionRatio = (produced - exported) / produced.
+     *                   When null/0, selfConsumptionRatio falls back to 0.
      */
-    fun compute(rawReadings: List<P1RawData>): DailyStats {
+    fun compute(rawReadings: List<P1RawData>, producedKwh: Double = 0.0): DailyStats {
         if (rawReadings.isEmpty()) return DailyStats()
         val first = rawReadings.first()
         val last = rawReadings.last()
@@ -85,8 +90,8 @@ object DailyStatsCalculator {
             if (hourlyExported[h] > peakExpKwh) { peakExpKwh = hourlyExported[h]; peakExpHour = h }
         }
 
-        val selfConsumptionRatio = if (consumedDelta + exportedDelta > 0.0) {
-            (consumedDelta / (consumedDelta + exportedDelta)).coerceIn(0.0, 1.0)
+        val selfConsumptionRatio = if (producedKwh > 0.0) {
+            ((producedKwh - exportedDelta) / producedKwh).coerceIn(0.0, 1.0)
         } else 0.0
         val netEnergy = consumedDelta - exportedDelta
 

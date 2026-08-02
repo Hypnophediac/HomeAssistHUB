@@ -7,8 +7,13 @@ package com.homeassisthub.client.network.model
  * import while another exports. The meter reports total import (sum of
  * importing phases) and total export (sum of exporting phases) separately.
  *
- * House consumption = inverterPowerW + importW - exportW
- * (i.e. vételezés + (napelem termelés - visszatáplálás))
+ * House consumption uses the Hub's pre-computed [P1ReadingDto.realConsumptionW],
+ * which is synchronized to account for the Huawei Kiosk API's ~5-minute
+ * reporting lag (it uses P1 import/export readings from 5 minutes ago,
+ * matching the age of the Kiosk's inverter production figure). Re-deriving
+ * houseW client-side from the *current* inverterPowerW + current import/export
+ * would mix a stale production value with instantaneous grid values and
+ * produce a physically inconsistent result — so we must trust the Hub's value.
  */
 data class LivePowerData(
     val inverterPowerW: Double,
@@ -40,9 +45,9 @@ data class LivePowerData(
             val importW = r.powerImportW
             val exportW = r.powerExportW
             val hasInverter = r.inverterPowerW > 0.0
-            val houseW = if (hasInverter) {
-                maxOf(0.0, r.inverterPowerW + importW - exportW)
-            } else 0.0
+            // Trust the Hub's T-5 synchronized value — do NOT recompute from
+            // current (unsynced) inverterPowerW/import/export, see class doc.
+            val houseW = if (hasInverter) maxOf(0.0, r.realConsumptionW) else 0.0
             return LivePowerData(
                 inverterPowerW = r.inverterPowerW,
                 importW = importW,

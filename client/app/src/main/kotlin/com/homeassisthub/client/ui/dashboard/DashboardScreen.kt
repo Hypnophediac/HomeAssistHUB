@@ -714,9 +714,7 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
         drawLineSeries({ it.powerImportW.toFloat() }, importColor)
         drawLineSeries({ it.powerExportW.toFloat() }, exportColor)
         drawLineSeries({ it.inverterPowerW.toFloat() }, inverterColor)
-        drawLineSeries({
-            maxOf(0f, it.inverterPowerW.toFloat() + it.powerImportW.toFloat() - it.powerExportW.toFloat())
-        }, consumptionColor)
+        drawLineSeries({ maxOf(0f, it.realConsumptionW.toFloat()) }, consumptionColor)
 
         drawContext.canvas.nativeCanvas.restore()
 
