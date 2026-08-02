@@ -351,6 +351,32 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                         exportW = lp?.powerExportL3W ?: 0.0
                     )
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                // Per-phase house consumption (solar/3 + import - export)
+                Text(
+                    text = "Fázisonkénti házfogyasztás",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val solarPerPhase = (lp?.inverterPowerW ?: 0.0) / 3.0
+                    HousePhaseChip(
+                        label = "L1",
+                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL1W ?: 0.0) - (lp?.powerExportL1W ?: 0.0))
+                    )
+                    HousePhaseChip(
+                        label = "L2",
+                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL2W ?: 0.0) - (lp?.powerExportL2W ?: 0.0))
+                    )
+                    HousePhaseChip(
+                        label = "L3",
+                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL3W ?: 0.0) - (lp?.powerExportL3W ?: 0.0))
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 P1HistoryChart(readings = readings)
             }
@@ -413,6 +439,23 @@ private fun PhasePowerChip(label: String, importW: Double, exportW: Double) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun HousePhaseChip(label: String, houseW: Double) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = formatW(houseW),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
