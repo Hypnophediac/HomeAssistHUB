@@ -239,10 +239,8 @@ private fun P1StatusCard(tick: Long) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("P1 Smart Meter", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             if (hasData) {
-                val netGrid = snap!!.powerImportW - snap.powerExportW
-                InfoRow("Import", "${snap.powerImportW.toInt()} W")
-                InfoRow("Export", "${snap.powerExportW.toInt()} W")
-                InfoRow("Net grid", "${netGrid.toInt()} W")
+                InfoRow("Import (hálózatból)", "${snap!!.powerImportW.toInt()} W")
+                InfoRow("Export (hálózatba)", "${snap!!.powerExportW.toInt()} W")
                 InfoRow("Napi import", "${"%.2f".format(dailyImport)} kWh")
                 InfoRow("Napi export", "${"%.2f".format(dailyExport)} kWh")
             } else {
