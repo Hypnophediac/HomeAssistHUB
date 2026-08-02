@@ -313,6 +313,44 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (lp != null) {
+                        "Áramerősség: %.1f / %.1f / %.1f A".format(lp.l1A, lp.l2A, lp.l3A)
+                    } else {
+                        "Áramerősség: — / — / — A"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                // Per-phase power breakdown
+                Text(
+                    text = "Fázisonkénti teljesítmény",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    PhasePowerChip(
+                        label = "L1",
+                        importW = lp?.powerImportL1W ?: 0.0,
+                        exportW = lp?.powerExportL1W ?: 0.0
+                    )
+                    PhasePowerChip(
+                        label = "L2",
+                        importW = lp?.powerImportL2W ?: 0.0,
+                        exportW = lp?.powerExportL2W ?: 0.0
+                    )
+                    PhasePowerChip(
+                        label = "L3",
+                        importW = lp?.powerImportL3W ?: 0.0,
+                        exportW = lp?.powerExportL3W ?: 0.0
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 P1HistoryChart(readings = readings)
             }
@@ -331,6 +369,29 @@ private fun StatChip(label: String, value: String, color: Color = MaterialTheme.
         )
         Text(
             text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun PhasePowerChip(label: String, importW: Double, exportW: Double) {
+    val net = importW - exportW
+    val color = when {
+        net > 0 -> MaterialTheme.colorScheme.error
+        net < 0 -> Color(0xFF2E7D32)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = formatW(kotlin.math.abs(net)),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = "$label  ${if (net > 0) "↓" else if (net < 0) "↑" else "—"}",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

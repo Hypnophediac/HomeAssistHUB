@@ -25,7 +25,14 @@ data class LivePowerData(
     val l3A: Double,
     val powerFactor: Double,
     val frequencyHz: Double,
-    val currentTariff: Int
+    val currentTariff: Int,
+    // Per-phase power (W)
+    val powerImportL1W: Double = 0.0,
+    val powerImportL2W: Double = 0.0,
+    val powerImportL3W: Double = 0.0,
+    val powerExportL1W: Double = 0.0,
+    val powerExportL2W: Double = 0.0,
+    val powerExportL3W: Double = 0.0
 ) {
     companion object {
         fun fromReading(r: P1ReadingDto): LivePowerData {
@@ -49,9 +56,15 @@ data class LivePowerData(
                 l1A = r.l1A,
                 l2A = r.l2A,
                 l3A = r.l3A,
-                powerFactor = 0.0,
-                frequencyHz = 50.0,
-                currentTariff = r.currentTariff
+                powerFactor = r.powerFactor,
+                frequencyHz = r.frequencyHz,
+                currentTariff = r.currentTariff,
+                powerImportL1W = r.powerImportL1W,
+                powerImportL2W = r.powerImportL2W,
+                powerImportL3W = r.powerImportL3W,
+                powerExportL1W = r.powerExportL1W,
+                powerExportL2W = r.powerExportL2W,
+                powerExportL3W = r.powerExportL3W
             )
         }
     }
