@@ -67,6 +67,42 @@ realConsumptionW = inverterPowerW + (P1importW - P1exportW)
 
 A Kiosk API ~5 perces késéssel dolgozik, ezért a P1 adatot T-5 perccel korábbi olvasattal kell használni. Ha a T-5min adat nem elérhető (pl. szolgáltatás újraindítás után), fallback a legfrissebb P1 olvasatra.
 
+### Közvetlen elérés — böngészőből ellenőrzés
+
+#### P1 Smart Meter (LAN-on)
+
+A P1 meter egy egyszerű HTTP JSON API-t szolgál ki. Bármilyen böngészőből elérhető a helyi hálózaton:
+
+```
+http://192.168.0.148:8989/json
+```
+
+- **IP/port** a Hub `SecureCredentialStore`-ban van tárolva (`deviceId = "p1_meter"`)
+- **Alapértelmezett**: `192.168.0.148:8989` (auto-provisioning ha nincs beállítva)
+- **Válasz**: JSON — `powerW`, `powerImportW`, `powerExportW`, `l1V/l2V/l3V`, `l1A/l2A/l3A`, `powerImportL1W.../powerExportL1W...`, `powerFactor`, `frequencyHz`, `importT1Kwh/importT2Kwh`, `exportT1Kwh/exportT2Kwh`, `currentTariff`
+- **Frissítés**: percenként (P1MeterController 60s poll)
+
+#### Huawei FusionSolar Kiosk (publikus URL)
+
+A Kiosk URL a Hub `HubConfigStore`-ban van tárolva (`kioskUrl` mező). Két formátumban lehet megadni:
+
+**1. Kiosk portál oldal (böngészőben vizuálisan):**
+```
+https://uni002eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/cloud.html#/kiosk?kk=n0uvBccyuPlyodtk9c46sHolzdwJDjrJ
+```
+- Ezt megnyitva böngészőben megjelenik a FusionSolar kiosk dashboard (real-time power, daily energy, power curve grafikon)
+
+**2. REST API endpoint (JSON válasz, böngészőből vagy curl-lel):**
+```
+https://uni002eu5.fusionsolar.huawei.com/rest/pvms/web/kiosk/v1/station-kiosk-file?kk=n0uvBccyuPlyodtk9c46sHolzdwJDjrJ
+```
+- **Válasz**: HTML-escaped JSON — `realKpi.realTimePower` (kW), `realKpi.dailyEnergy` (kWh), `realKpi.cumulativeEnergy`, `powerCurve.activePower[]` (kW/időpont)
+- **Frissítés**: ~5 percenként (HuaweiCloudScraper 300s poll)
+- **Domain**: `uni002eu5.fusionsolar.huawei.com` (alapértelmezett, ha csak kk token van megadva)
+- **kk token**: a kiosk URL-ből kivonva (`kk=...` paraméter)
+
+> **Megjegyzés**: A fenti URL-ek és tokenek példák. A valós kk token a saját FusionSolar fiókból / kiosk linkből származik. A Hub Beállítások → Kiosk URL mezőben van konfigurálva, és a `get_kiosk_url` Socket.IO paranccsal is lekérdezhető.
+
 ## Client (`client/`)
 
 Android app, ami két adatforrást használ:
