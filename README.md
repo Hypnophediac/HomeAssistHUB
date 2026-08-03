@@ -72,14 +72,95 @@ A Kiosk API ~5 perces késéssel dolgozik, ezért a P1 adatot T-5 perccel koráb
 Android app, ami két adatforrást használ:
 
 - **Socket.IO (Hub)** — élő Dashboard: P1 adatok, inverter adatok, eszközvezérlés (konnektor be/ki), kamera
-- **REST API (Render)** — Energia fül: historikus napi/heti/havi/éves/egyedi dátumtartomány statisztikák
+- **REST API (Render/MongoDB)** — Energia fül: historikus napi/heti/havi/éves/egyedi dátumtartomány statisztikák
+- **Open-Meteo API** — időjárás-alapú napelem termelés előrejelzés (külső API, kulcs nélkül)
 
-### Fő képernyők
+### Adatforrások részletesen
 
-- **Dashboard** — élő flow kártyák (napelem termelés, ház fogyasztás, import, export), 3-fázisú P1 adatok, interaktív grafikon (pinch-to-zoom, pan), per-fázis chippek
-- **Energia** — Napi/Heti/Havi/Éves/Egyedi tabok, statisztikai kártyák (termelés, fogyasztás, export, önfogyasztási arány), oszlopdiagram
-- **Kamera** — ONVIF RTSP kamera snapshot
-- **Beállítások** — relé URL, home ID, sync token, GPS/PV kapacitás/rendszert hatásfok, sötét téma
+| Adatforrás | Protokoll | Mikor | Mit ad |
+|---|---|---|---|
+| Hub (Socket.IO) | `command_request`/`command_response` a relé-n keresztül | 2mp-es polling | Élő P1 olvasatok, inverter adatok, eszközvezérlés, kamera snapshot |
+| Render REST API | HTTP GET `Bearer <syncToken>` | Kézi frissítés / tab váltás | Napi/heti/havi/éves/egyedi energiestatisztikák (MongoDB-ből) |
+| Open-Meteo | HTTP GET (direkt) | Kézi frissítés | Időjárás + shortwave_radiation → PV termelés becslés |
+
+### Képernyők és widgetek — adatforrás és számítás
+
+#### 1. Dashboard fül (`DashboardScreen.kt`)
+
+**Adatforrás: Socket.IO → Hub `get_p1_history` parancs (2mp polling, 30mp-ként full 24ó history)**
+
+| Widget | Megjelenített adat | Forrás | Számítás |
+|---|---|---|---|
+| **P1PowerCard — StatChips** | Napelem (W) | `P1ReadingDto.inverterPowerW` | Hub `InverterLiveData.activePowerW` (Kiosk scrape) |
+| | Ház Fogy. (W) | `P1ReadingDto.realConsumptionW` | Hub által számolt T-5 szinkronizált érték: `inverterPowerW + (P1importW - P1exportW)` |
+| | Vételezés (W) | `P1ReadingDto.powerImportW` | P1 meter `instantaneous_power_import` (összes fázis) |
+| | Betáplálás (W) | `P1ReadingDto.powerExportW` | P1 meter `instantaneous_power_export` (összes fázis) |
+| **P1PowerCard — Feszültség** | L1/L2/L3 (V) | `P1ReadingDto.l1V/l2V/l3V` | P1 meter `voltage_phase_l1/l2/l3` |
+| **P1PowerCard — Áramerősség** | L1/L2/L3 (A) | `P1ReadingDto.l1A/l2A/l3A` | P1 meter `current_phase_l1/l2/l3` |
+| **PhasePowerChip** (L1/L2/L3) | Import/Export per fázis (W) | `P1ReadingDto.powerImportL1W.../powerExportL1W...` | P1 meter `instantaneous_power_import_l1.../export_l1...` |
+| **HousePhaseChip** (L1/L2/L3) | Ház fogyasztás per fázis (W) | Számolt | `solarPerPhase + importLxW - exportLxW`, ahol `solarPerPhase = inverterPowerW / 3` |
+| **P1HistoryChart** | Teljesítmény görbe (import/export/consumption) | `P1ReadingDto` lista (100-1440 pont) | Consumption = `realConsumptionW` (Hub T-5 szinkronizált) |
+| **FreshnessBadge** | Adatfrissesség (zöld/sárga/piros) | `P1ReadingDto.timestamp` | `now - timestamp`: <90s=Élő, <6p=X perce, >6p=Elavult |
+| **CloudSyncBadge** | Cloud sync státusz | `cloudSync.lastSyncTime` (Socket.IO válaszban) | `now - lastSyncTime`: <5p=syncél, <15p=Xp, >15p=Xp |
+| **DailySummaryCard** | Napi inverter kWh, P1 import/export kWh, ház kWh | `dailySummary` (Socket.IO válaszban) | Hub `InverterLiveData.dailyEnergyKwh` + `P1HistoryBuffer.getDailyKwhDeltas()` |
+| **PlugCards** | Smart plug lista + on/off állapot | `list_devices` parancs | Hub `SecureCredentialStore`-ból olvasott eszközök |
+
+#### 2. Energia fül (`EnergyDashboardScreen.kt`)
+
+**Élő adatok: Socket.IO → Hub `get_p1_history` (2mp polling)**
+**Historikus adatok: Render REST API → MongoDB**
+
+| Widget | Megjelenített adat | Forrás | Számítás |
+|---|---|---|---|
+| **LiveFlowCards — Napelem Termelés** | W | `LivePowerData.inverterPowerW` | Hub Kiosk scrape |
+| **LiveFlowCards — Ház Fogyasztás** | W | `LivePowerData.houseW` | Hub T-5 szinkronizált `realConsumptionW` |
+| **LiveFlowCards — Import** | W | `LivePowerData.importW` | P1 meter |
+| **LiveFlowCards — Export** | W | `LivePowerData.exportW` | P1 meter |
+| **FreshnessBadge** | Adatfrissesség | `LivePowerData.timestamp` | U.a. mint Dashboard |
+| **CloudSyncBadge** | Cloud sync státusz | `cloudSyncLastTime` | U.a. mint Dashboard |
+| **ForecastCard — Mára várható** | kWh | Open-Meteo `shortwave_radiation` | `pvCapacityKwp * (radiation / 1000) * performanceRatio` óránként, összegezve |
+| **ForecastCard — Eddig termelt** | kWh | `dailySummary.inverterDailyKwh` | Hub Kiosk `dailyEnergy` |
+| **ForecastCard — Jelenleg** | °C, felhőzet % | Open-Meteo `temperature_2m`, `cloudcover` | Aktuális óra indexe |
+| **SummaryCards (Napi tab)** | Vételezés/visszatáplálás (kWh) | Render `GET /daily` → `EnergyDailyResponseDto` | MongoDB P1RawReading aggregáció |
+| **SummaryCards — LiveStatCard** | Vételezés/visszatáplálás (W) | Render `latestPowerImportW/ExportW` | MongoDB legutolsó P1 olvasat |
+| **SummaryCards — Feszültség/Áram** | L1/L2/L3 V és A | Render `latestL1V.../latestL1A...` | MongoDB legutolsó P1 olvasat |
+| **SummaryCards — Power Factor/Frekvencia** | PF, Hz | Render `latestPowerFactor/latestFrequencyHz` | MongoDB legutolsó P1 olvasat |
+| **SummaryCards — Napi statisztika** | Min/Max/Átlag teljesítmény (W) | Render `minPowerW/maxPowerW/avgPowerW` | MongoDB P1RawReading aggregáció |
+| **SummaryCards — Max vételezés/visszatáplálás** | W | Render `maxImportW/maxExportW` | MongoDB P1RawReading max |
+| **SummaryCards — Csúcs órák** | Óra + kWh | Render `peakConsumptionHour/peakExportHour` | MongoDB órás bontás max |
+| **SummaryCards — Önfogyasztási arány** | % | Render `selfConsumptionRatio` | `(produced - exported) / produced` |
+| **SummaryCards — Hálózati egyenleg** | kWh | Render `netEnergyKwh` | `totalConsumedKwh - totalExportedKwh` |
+| **SummaryCards — Tariff 1/2** | kWh | Render `importT1Kwh/importT2Kwh` | P1 meter `active_import_energy_tariff_1/2` delta |
+| **SummaryCards — Export T1/T2** | kWh | Render `exportT1Kwh/exportT2Kwh` | P1 meter `active_export_energy_tariff_1/2` delta |
+| **SummaryCards — Fázisonkénti átlag** | V, A, PF, Hz átlag | Render `avgL1V.../avgL1A.../avgPowerFactor/avgFrequencyHz` | MongoDB P1RawReading napi átlag |
+| **EnergyColumnChart (Napi)** | Óránkénti fogyasztás/visszatáplálás (kWh) | Render `hourly[].consumedKwh/exportedKwh` | MongoDB órás aggregáció, csak eddigi órák |
+| **PeriodSummaryCards (Heti/Havi/Éves/Egyedi)** | Vételezés/visszatáplálás/termelés (kWh) | Render `GET /weekly/monthly/yearly/range` | MongoDB napi bontású aggregáció |
+| **PeriodSummaryCards — Önfogyasztási arány** | % | Számolt kliens oldalon | `((totalProducedKwh - totalExportedKwh) / totalProducedKwh) * 100` |
+| **EnergyColumnChart (Heti/Havi/Éves/Egyedi)** | Napi/havi bontású fogyasztás/visszatáplálás | Render `entries[].consumedKwh/exportedKwh` | MongoDB aggregáció |
+| **EnergyDateRangePicker** | Dátumtartomány választó | Material3 `DateRangePicker` | UTC `yyyy-MM-dd` formátum |
+
+#### 3. Kamera fül (`CameraScreen.kt`)
+
+**Adatforrás: Socket.IO → Hub `list_devices` + `get_snapshot` parancsok**
+
+| Widget | Megjelenített adat | Forrás |
+|---|---|---|
+| **Kamera lista** | `v380_ptz` és `rtsp_camera` típusú eszközök | Hub `list_devices` → `SecureCredentialStore` |
+| **PTZ vezérlés** | Fel/le/bal/jobbra parancsok | Socket.IO `sendCommand(deviceId, action)` |
+| **Snapshot** | Kamera kép (base64) | Hub `get_snapshot` → ExoPlayer RTSP frame grab |
+
+#### 4. Beállítások fül (`SettingsScreen.kt`)
+
+**Adatforrás: lokális SharedPreferences + Socket.IO → Hub parancsok**
+
+| Widget | Adat | Forrás | Mentés |
+|---|---|---|---|
+| **ConnectionCard** | Relé URL, Home ID, Hub Local URL, Sync Token | `ClientConfigStore` (SharedPreferences) | Lokális mentés |
+| **DiscoveryCard** | Hálózati eszköz felderítés | Hub `discover_devices` parancs | — |
+| **AddCredentialCard** | Eszköz ID, típus, IP, port, user, jelszó | Hub `save_credential` parancs | Hub `SecureCredentialStore` |
+| **SavedDevicesCard** | Mentett eszközök listája | Hub `list_devices` parancs | Hub `delete_credential` |
+| **KioskUrlCard** | Huawei Kiosk URL | Hub `save_kiosk_url` / `get_kiosk_url` | Hub `HubConfigStore` |
+| **PvForecastCard** | GPS lat/long, PV kapacitás (kWp), rendszert hatásfok (%) | `ClientConfigStore` (SharedPreferences) | Lokális mentés |
 
 ### Téma
 
@@ -87,7 +168,7 @@ App-wide sötét téma (OLED-barát):
 - background = #121212
 - surface = #1E293B
 - surfaceContainerHighest = #334155
-- Akcentusok: zöld (termelés), narancs (import), kék (export), türkiz (ház fogyasztás)
+- Akcentusok: zöld #10B981 (termelés), narancs #F59E0B (import), kék #3B82F6 (export), lila #8B5CF6 (ház fogyasztás)
 
 ## Relay (`relay/`)
 
