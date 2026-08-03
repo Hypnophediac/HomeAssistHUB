@@ -123,6 +123,12 @@ Client (anywhere)
 | `FUSIONSOLAR_USERNAME` | No | OpenAPI username |
 | `FUSIONSOLAR_SYSTEM_CODE` | No | OpenAPI system code |
 
+### Budapest-aware Date Handling
+
+All energy endpoints use `Europe/Budapest` timezone for date boundary calculations
+via the `dateRangeMillis()` helper. The `yearly` endpoint iterates months using
+`dateRangeMillis` for accurate month start/end timestamps (not raw `new Date().getTime()`).
+
 ## Local Development
 ```bash
 npm install
