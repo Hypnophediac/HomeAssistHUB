@@ -363,23 +363,36 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Estimate realtime solar from P1 + synced house consumption:
-                    // solar = export - import + houseConsumption (all from Hub)
-                    // This avoids the 5-min Kiosk API delay of inverterPowerW.
-                    val solarRealtime = maxOf(0.0,
-                        (lp?.exportW ?: 0.0) - (lp?.importW ?: 0.0) + (lp?.realConsumptionW ?: 0.0))
-                    val solarPerPhase = solarRealtime / 3.0
+                    // Distribute total house consumption proportionally to
+                    // each phase's apparent power (V×A). This is stable — no
+                    // random spiking from the unstable import/export direction
+                    // guessing. When boiler turns on, L1 current rises → L1
+                    // gets a bigger share. Total always matches Hub's houseW.
+                    val totalHouseW = lp?.houseW ?: 0.0
+                    val v1 = lp?.l1V ?: 0.0
+                    val v2 = lp?.l2V ?: 0.0
+                    val v3 = lp?.l3V ?: 0.0
+                    val a1 = lp?.l1A ?: 0.0
+                    val a2 = lp?.l2A ?: 0.0
+                    val a3 = lp?.l3A ?: 0.0
+                    val va1 = v1 * a1
+                    val va2 = v2 * a2
+                    val va3 = v3 * a3
+                    val vaTotal = va1 + va2 + va3
+                    val houseL1 = if (vaTotal > 0.0) totalHouseW * (va1 / vaTotal) else 0.0
+                    val houseL2 = if (vaTotal > 0.0) totalHouseW * (va2 / vaTotal) else 0.0
+                    val houseL3 = if (vaTotal > 0.0) totalHouseW * (va3 / vaTotal) else 0.0
                     HousePhaseChip(
                         label = "L1",
-                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL1W ?: 0.0) - (lp?.powerExportL1W ?: 0.0))
+                        houseW = maxOf(0.0, houseL1)
                     )
                     HousePhaseChip(
                         label = "L2",
-                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL2W ?: 0.0) - (lp?.powerExportL2W ?: 0.0))
+                        houseW = maxOf(0.0, houseL2)
                     )
                     HousePhaseChip(
                         label = "L3",
-                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL3W ?: 0.0) - (lp?.powerExportL3W ?: 0.0))
+                        houseW = maxOf(0.0, houseL3)
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
