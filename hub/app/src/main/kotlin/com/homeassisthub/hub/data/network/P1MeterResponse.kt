@@ -97,16 +97,85 @@ data class P1MeterResponse(
     val l2A: Double get() = l2AStr.toDoubleOrNull() ?: 0.0
     val l3A: Double get() = l3AStr.toDoubleOrNull() ?: 0.0
 
-    // Per-phase power: trust meter values directly.
-    // Do NOT fall back to V×I×PF using total direction — in 3-phase systems
-    // with asymmetric loads, individual phases can import while others export
-    // simultaneously. The total direction cannot determine per-phase direction.
-    val powerImportL1W: Double get() = (powerImportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-    val powerImportL2W: Double get() = (powerImportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-    val powerImportL3W: Double get() = (powerImportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-    val powerExportL1W: Double get() = (powerExportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-    val powerExportL2W: Double get() = (powerExportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-    val powerExportL3W: Double get() = (powerExportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+    // Per-phase power: use meter values if reported (>0). Otherwise fall back to
+    // V×I×PF and determine per-phase direction by trying all 8 import/export
+    // combinations and picking the one that best matches total import/export.
+    private fun phaseDirections(): IntArray {
+        val totalImp = powerImportW
+        val totalExp = powerExportW
+        if (totalImp <= 0.0 && totalExp <= 0.0) return intArrayOf(0, 0, 0)
+
+        val p1 = l1V * l1A * powerFactorL1
+        val p2 = l2V * l2A * powerFactorL2
+        val p3 = l3V * l3A * powerFactorL3
+        if (p1 <= 0.0 && p2 <= 0.0 && p3 <= 0.0) return intArrayOf(0, 0, 0)
+
+        val powers = doubleArrayOf(p1, p2, p3)
+        var bestScore = Double.MAX_VALUE
+        var bestDirs = intArrayOf(1, 1, 1)
+
+        for (mask in 0..7) {
+            val dirs = intArrayOf(
+                if (mask and 1 != 0) 1 else -1,
+                if (mask and 2 != 0) 1 else -1,
+                if (mask and 4 != 0) 1 else -1
+            )
+            var sumImp = 0.0
+            var sumExp = 0.0
+            for (i in 0..2) {
+                if (dirs[i] == 1) sumImp += powers[i] else sumExp += powers[i]
+            }
+            val score = Math.abs(sumImp - totalImp) + Math.abs(sumExp - totalExp)
+            if (score < bestScore) {
+                bestScore = score
+                bestDirs = dirs
+            }
+        }
+        return bestDirs
+    }
+
+    val powerImportL1W: Double get() {
+        val raw = (powerImportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        if (raw > 0.0) return raw
+        val p = l1V * l1A * powerFactorL1
+        if (p <= 0.0) return 0.0
+        return if (phaseDirections()[0] == 1) p else 0.0
+    }
+    val powerImportL2W: Double get() {
+        val raw = (powerImportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        if (raw > 0.0) return raw
+        val p = l2V * l2A * powerFactorL2
+        if (p <= 0.0) return 0.0
+        return if (phaseDirections()[1] == 1) p else 0.0
+    }
+    val powerImportL3W: Double get() {
+        val raw = (powerImportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        if (raw > 0.0) return raw
+        val p = l3V * l3A * powerFactorL3
+        if (p <= 0.0) return 0.0
+        return if (phaseDirections()[2] == 1) p else 0.0
+    }
+    val powerExportL1W: Double get() {
+        val raw = (powerExportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        if (raw > 0.0) return raw
+        val p = l1V * l1A * powerFactorL1
+        if (p <= 0.0) return 0.0
+        return if (phaseDirections()[0] == -1) p else 0.0
+    }
+    val powerExportL2W: Double get() {
+        val raw = (powerExportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        if (raw > 0.0) return raw
+        val p = l2V * l2A * powerFactorL2
+        if (p <= 0.0) return 0.0
+        return if (phaseDirections()[1] == -1) p else 0.0
+    }
+    val powerExportL3W: Double get() {
+        val raw = (powerExportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        if (raw > 0.0) return raw
+        val p = l3V * l3A * powerFactorL3
+        if (p <= 0.0) return 0.0
+        return if (phaseDirections()[2] == -1) p else 0.0
+    }
 
     val powerFactor: Double get() = powerFactorStr.toDoubleOrNull() ?: 0.0
     val powerFactorL1: Double get() = powerFactorL1Str.toDoubleOrNull() ?: 0.0
