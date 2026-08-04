@@ -37,7 +37,8 @@ data class LivePowerData(
     val powerImportL3W: Double = 0.0,
     val powerExportL1W: Double = 0.0,
     val powerExportL2W: Double = 0.0,
-    val powerExportL3W: Double = 0.0
+    val powerExportL3W: Double = 0.0,
+    val realConsumptionW: Double = 0.0
 ) {
     companion object {
         fun fromReading(r: P1ReadingDto): LivePowerData {
@@ -69,7 +70,8 @@ data class LivePowerData(
                 powerImportL3W = r.powerImportL3W,
                 powerExportL1W = r.powerExportL1W,
                 powerExportL2W = r.powerExportL2W,
-                powerExportL3W = r.powerExportL3W
+                powerExportL3W = r.powerExportL3W,
+                realConsumptionW = r.realConsumptionW
             )
         }
     }

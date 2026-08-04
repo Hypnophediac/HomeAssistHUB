@@ -363,7 +363,12 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val solarPerPhase = (lp?.inverterPowerW ?: 0.0) / 3.0
+                    // Estimate realtime solar from P1 + synced house consumption:
+                    // solar = export - import + houseConsumption (all from Hub)
+                    // This avoids the 5-min Kiosk API delay of inverterPowerW.
+                    val solarRealtime = maxOf(0.0,
+                        (lp?.exportW ?: 0.0) - (lp?.importW ?: 0.0) + (lp?.realConsumptionW ?: 0.0))
+                    val solarPerPhase = solarRealtime / 3.0
                     HousePhaseChip(
                         label = "L1",
                         houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL1W ?: 0.0) - (lp?.powerExportL1W ?: 0.0))
