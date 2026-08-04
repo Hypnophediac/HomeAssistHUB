@@ -363,53 +363,18 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val invW = lp?.inverterPowerW ?: 0.0
-                    val expL1 = lp?.powerExportL1W ?: 0.0
-                    val expL2 = lp?.powerExportL2W ?: 0.0
-                    val expL3 = lp?.powerExportL3W ?: 0.0
-                    val totalExport = expL1 + expL2 + expL3
-                    // Distribute inverter power across phases based on export ratios.
-                    // When exporting on a phase, that phase is producing surplus solar —
-                    // so it gets a proportionally larger share of the inverter power.
-                    // When there's no export at all (all self-consumed), fall back to
-                    // equal distribution, but weight by import (higher import = higher load).
-                    val impL1 = lp?.powerImportL1W ?: 0.0
-                    val impL2 = lp?.powerImportL2W ?: 0.0
-                    val impL3 = lp?.powerImportL3W ?: 0.0
-                    val totalImport = impL1 + impL2 + impL3
-
-                    val solarL1: Double
-                    val solarL2: Double
-                    val solarL3: Double
-                    if (totalExport > 1.0) {
-                        solarL1 = invW * (expL1 / totalExport)
-                        solarL2 = invW * (expL2 / totalExport)
-                        solarL3 = invW * (expL3 / totalExport)
-                    } else if (totalImport > 1.0) {
-                        // No export — all solar is self-consumed.
-                        // Phases with higher import likely consume more solar too.
-                        // Give equal base share + weight by import.
-                        val base = invW / 3.0
-                        val importWeight = invW / 3.0
-                        solarL1 = base + importWeight * (impL1 / totalImport) * 0.5
-                        solarL2 = base + importWeight * (impL2 / totalImport) * 0.5
-                        solarL3 = base + importWeight * (impL3 / totalImport) * 0.5
-                    } else {
-                        solarL1 = invW / 3.0
-                        solarL2 = invW / 3.0
-                        solarL3 = invW / 3.0
-                    }
+                    val solarPerPhase = (lp?.inverterPowerW ?: 0.0) / 3.0
                     HousePhaseChip(
                         label = "L1",
-                        houseW = maxOf(0.0, solarL1 + impL1 - expL1)
+                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL1W ?: 0.0) - (lp?.powerExportL1W ?: 0.0))
                     )
                     HousePhaseChip(
                         label = "L2",
-                        houseW = maxOf(0.0, solarL2 + impL2 - expL2)
+                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL2W ?: 0.0) - (lp?.powerExportL2W ?: 0.0))
                     )
                     HousePhaseChip(
                         label = "L3",
-                        houseW = maxOf(0.0, solarL3 + impL3 - expL3)
+                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL3W ?: 0.0) - (lp?.powerExportL3W ?: 0.0))
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
