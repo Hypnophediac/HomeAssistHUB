@@ -157,8 +157,8 @@ Android app, ami két adatforrást használ:
 | | Betáplálás (W) | `P1ReadingDto.powerExportW` | P1 meter `instantaneous_power_export` (összes fázis) |
 | **P1PowerCard — Feszültség** | L1/L2/L3 (V) | `P1ReadingDto.l1V/l2V/l3V` | P1 meter `voltage_phase_l1/l2/l3` |
 | **P1PowerCard — Áramerősség** | L1/L2/L3 (A) | `P1ReadingDto.l1A/l2A/l3A` | P1 meter `current_phase_l1/l2/l3` |
-| **PhasePowerChip** (L1/L2/L3) | Import/Export per fázis (W) | `P1ReadingDto.powerImportL1W.../powerExportL1W...` | P1 meter `instantaneous_power_import_l1.../export_l1...` — közvetlenül a meterből, nincs fallback számítás |
-| **HousePhaseChip** (L1/L2/L3) | Ház fogyasztás per fázis (W) | Számolt | `solarPerPhase + importLxW - exportLxW`, ahol `solarPerPhase = inverterPowerW / 3` (SUN2000-5KTL-M1 szimmetrikus inverter). Aszimmetrikus terhelésnél (L1=bojler 10A, L2=klíma 10A, L3=ház 32A) a fázisok egyszerre importálhatnak és exportálhatnak — a P1 meter per-fázis értékei közvetlenül használva |
+| **PhasePowerChip** (L1/L2/L3) | Import/Export per fázis (W) | `P1ReadingDto.powerImportL1W.../powerExportL1W...` | P1 meter `instantaneous_power_import_lx/export_lx` — ha 0 (meter nem jelenti), V×I×PF fallback: `V_lx × I_lx × PF_lx`, irány az összesített import/export alapján (8 kombináció legjobb illeszkedése) |
+| **HousePhaseChip** (L1/L2/L3) | Ház fogyasztás per fázis (W) | Számolt | `solarPerPhase + importLxW - exportLxW`, ahol `solarPerPhase = inverterPowerW / 3` (SUN2000-5KTL-M1 szimmetrikus inverter). Aszimmetrikus terhelésnél (L1=bojler 10A, L2=klíma 10A, L3=ház 32A) a fázisok egyszerre importálhatnak és exportálhatnak |
 | **P1HistoryChart** | Teljesítmény görbe (import/export/consumption) | `P1ReadingDto` lista (100-1440 pont) | Consumption = `realConsumptionW` (Hub T-5 szinkronizált) |
 | **FreshnessBadge** | Adatfrissesség (zöld/sárga/piros) | `P1ReadingDto.timestamp` | `now - timestamp`: <90s=Élő, <6p=X perce, >6p=Elavult |
 | **CloudSyncBadge** | Cloud sync státusz | `cloudSync.lastSyncTime` (Socket.IO válaszban) | `now - lastSyncTime`: <5p=syncél, <15p=Xp, >15p=Xp |
