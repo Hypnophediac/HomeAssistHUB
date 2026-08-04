@@ -81,6 +81,29 @@ class CommandRouter(
             val config = hubConfigStore?.getConfig()
             CommandResult.Success(mapOf("kioskUrl" to (config?.kioskUrl ?: "")))
         }
+        "save_baseline" -> {
+            val importKwh = params["importKwh"]?.toDoubleOrNull()
+                ?: error("Missing importKwh")
+            val exportKwh = params["exportKwh"]?.toDoubleOrNull()
+                ?: error("Missing exportKwh")
+            val date = params["date"] ?: error("Missing date")
+            val store = hubConfigStore ?: error("Hub config store not available")
+            store.saveBaseline(importKwh, exportKwh, date)
+            Log.i("CommandRouter", "Baseline saved: import=$importKwh export=$exportKwh date=$date")
+            CommandResult.Success(mapOf(
+                "baselineImportKwh" to importKwh,
+                "baselineExportKwh" to exportKwh,
+                "baselineDate" to date
+            ))
+        }
+        "get_baseline" -> {
+            val config = hubConfigStore?.getConfig()
+            CommandResult.Success(mapOf(
+                "baselineImportKwh" to (config?.baselineImportKwh ?: 0.0),
+                "baselineExportKwh" to (config?.baselineExportKwh ?: 0.0),
+                "baselineDate" to (config?.baselineDate ?: "")
+            ))
+        }
         "discover_devices" -> {
             val timeoutMs = params["timeoutMs"]?.toLongOrNull() ?: 3000L
             val devices = discoveryManager.discoverAll(timeoutMs)
@@ -217,7 +240,28 @@ class CommandRouter(
                     ),
                     "cloudSync" to mapOf(
                         "lastSyncTime" to (hubConfigStore?.getLastSyncTime() ?: 0L)
-                    )
+                    ),
+                    "baseline" to run {
+                        val config = hubConfigStore?.getConfig()
+                        val latest = com.homeassisthub.hub.controller.P1HistoryBuffer.latestSnapshot
+                        val currentImportTotal = latest?.importTotalKwh ?: 0.0
+                        val currentExportTotal = latest?.exportTotalKwh ?: 0.0
+                        val bImport = config?.baselineImportKwh ?: 0.0
+                        val bExport = config?.baselineExportKwh ?: 0.0
+                        val bDate = config?.baselineDate ?: ""
+                        val yearlyImport = if (bImport > 0.0) maxOf(0.0, currentImportTotal - bImport) else 0.0
+                        val yearlyExport = if (bExport > 0.0) maxOf(0.0, currentExportTotal - bExport) else 0.0
+                        mapOf(
+                            "baselineImportKwh" to bImport,
+                            "baselineExportKwh" to bExport,
+                            "baselineDate" to bDate,
+                            "currentImportTotalKwh" to currentImportTotal,
+                            "currentExportTotalKwh" to currentExportTotal,
+                            "yearlyImportKwh" to yearlyImport,
+                            "yearlyExportKwh" to yearlyExport,
+                            "yearlyBalanceKwh" to (yearlyImport - yearlyExport)
+                        )
+                    }
                 )
             )
         }

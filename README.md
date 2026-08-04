@@ -67,6 +67,30 @@ realConsumptionW = inverterPowerW + (P1importW - P1exportW)
 
 A Kiosk API ~5 perces késéssel dolgozik, ezért a P1 adatot T-5 perccel korábbi olvasattal kell használni. Ha a T-5min adat nem elérhető (pl. szolgáltatás újraindítás után), fallback a legfrissebb P1 olvasatra.
 
+### Elszámolási nyitóértékek (MVM Baseline)
+
+A P1 mérőóra kumulált állásokat ad vissza (beüzemelés óta), így az éves fogyasztás/visszatáplálás számításához ismerni kell az utolsó hivatalos MVM leolvasás napján mért óraállásokat.
+
+**Képlet:**
+```
+Idei vételezés (Import) = current_import_total - baseline_import
+Idei visszatáplálás (Export) = current_export_total - baseline_export
+Éves egyenleg (kWh) = Idei vételezés - Idei visszatáplálás
+```
+
+**Tárolás:** `HubConfigStore` SharedPreferences — `baseline_import_kwh`, `baseline_export_kwh`, `baseline_date`
+
+**Beállítás helye:**
+- **Hub**: Dashboard → Beállítások → "Elszámolási nyitóértékek (MVM)" section
+- **Kliens**: Beállítások fül → "Elszámolási nyitóértékek (MVM)" kártya (Socket.IO `save_baseline` / `get_baseline` parancsok)
+
+**Megjelenítés:** Energia fül → Éves tab → BaselineCard (idei vételezés, visszatáplálás, éves egyenleg, jelenlegi óraállások)
+
+**Adatforrás a `get_p1_history` válaszban:** `baseline` objektum, amely tartalmazza:
+- `baselineImportKwh`, `baselineExportKwh`, `baselineDate` — a mentett nyitóértékek
+- `currentImportTotalKwh`, `currentExportTotalKwh` — a P1 mérő jelenlegi kumulált állásai (`P1HistoryBuffer.latestSnapshot`)
+- `yearlyImportKwh`, `yearlyExportKwh`, `yearlyBalanceKwh` — számolt éves delták
+
 ### Közvetlen elérés — böngészőből ellenőrzés
 
 #### P1 Smart Meter (LAN-on)
@@ -173,6 +197,7 @@ Android app, ami két adatforrást használ:
 | **PeriodSummaryCards (Heti/Havi/Éves/Egyedi)** | Vételezés/visszatáplálás/termelés (kWh) | Render `GET /weekly/monthly/yearly/range` | MongoDB napi bontású aggregáció |
 | **PeriodSummaryCards — Önfogyasztási arány** | % | Számolt kliens oldalon | `((totalProducedKwh - totalExportedKwh) / totalProducedKwh) * 100` |
 | **EnergyColumnChart (Heti/Havi/Éves/Egyedi)** | Napi/havi bontású fogyasztás/visszatáplálás | Render `entries[].consumedKwh/exportedKwh` | MongoDB aggregáció |
+| **BaselineCard (Éves tab)** | Idei vételezés/visszatáplálás/egyenleg (kWh), jelenlegi óraállások | Socket.IO `get_p1_history` → `baseline` objektum | `currentTotal - baseline` (Hub oldalon számolva) |
 | **EnergyDateRangePicker** | Dátumtartomány választó | Material3 `DateRangePicker` | UTC `yyyy-MM-dd` formátum |
 
 #### 3. Kamera fül (`CameraScreen.kt`)
@@ -196,6 +221,7 @@ Android app, ami két adatforrást használ:
 | **AddCredentialCard** | Eszköz ID, típus, IP, port, user, jelszó | Hub `save_credential` parancs | Hub `SecureCredentialStore` |
 | **SavedDevicesCard** | Mentett eszközök listája | Hub `list_devices` parancs | Hub `delete_credential` |
 | **KioskUrlCard** | Huawei Kiosk URL | Hub `save_kiosk_url` / `get_kiosk_url` | Hub `HubConfigStore` |
+| **BaselineSettingsCard** | Nyitó vételezés/visszatáplálás (kWh), leolvasás dátuma | Hub `save_baseline` / `get_baseline` | Hub `HubConfigStore` (SharedPreferences) |
 | **PvForecastCard** | GPS lat/long, PV kapacitás (kWp), rendszert hatásfok (%) | `ClientConfigStore` (SharedPreferences) | Lokális mentés |
 
 ### Téma

@@ -206,6 +206,8 @@ private fun HubDashboard(
                         P1ConfigSection(credentialStore, onRestartService)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         CloudSyncConfigSection(hubConfigStore)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        BaselineConfigSection(hubConfigStore)
                     }
                 }
             }
@@ -450,6 +452,62 @@ private fun CloudSyncConfigSection(hubConfigStore: HubConfigStore) {
         savedMessage = "Új sync token generálva!"
     }) {
         Text(if (syncToken.isBlank()) "Token generálása" else "Új token")
+    }
+    savedMessage?.let {
+        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
+private fun BaselineConfigSection(hubConfigStore: HubConfigStore) {
+    val hubConfig = hubConfigStore.getConfig()
+    var importKwh by remember { mutableStateOf(hubConfig?.baselineImportKwh?.toString() ?: "") }
+    var exportKwh by remember { mutableStateOf(hubConfig?.baselineExportKwh?.toString() ?: "") }
+    var date by remember { mutableStateOf(hubConfig?.baselineDate ?: "") }
+    var savedMessage by remember { mutableStateOf<String?>(null) }
+
+    Text("Elszámolási nyitóértékek (MVM)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+    Text(
+        "A P1 mérőóra kumulált állásai az utolsó hivatalos leolvasás napján. Ezekből számolódik az éves vételezés/visszatáplálás.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    OutlinedTextField(
+        value = importKwh,
+        onValueChange = { importKwh = it.filter { c -> c.isDigit() || c == '.' } },
+        label = { Text("Nyitó vételezés (kWh)") },
+        placeholder = { Text("8779.0") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = exportKwh,
+        onValueChange = { exportKwh = it.filter { c -> c.isDigit() || c == '.' } },
+        label = { Text("Nyitó visszatáplálás (kWh)") },
+        placeholder = { Text("5000.0") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = date,
+        onValueChange = { date = it },
+        label = { Text("Leolvasás dátuma") },
+        placeholder = { Text("2026-01-14") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Button(onClick = {
+        val imp = importKwh.trim().toDoubleOrNull()
+        val exp = exportKwh.trim().toDoubleOrNull()
+        val dt = date.trim()
+        if (imp == null || exp == null || dt.isBlank()) {
+            savedMessage = "Minden mező kitöltése kötelező!"
+            return@Button
+        }
+        hubConfigStore.saveBaseline(imp, exp, dt)
+        savedMessage = "Baseline mentve!"
+    }) {
+        Text("Mentés")
     }
     savedMessage?.let {
         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)

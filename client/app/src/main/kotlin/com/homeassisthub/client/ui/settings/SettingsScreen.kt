@@ -73,6 +73,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     var pvCapacityKwp by remember { mutableStateOf(pvConfig.pvCapacityKwp?.toString() ?: "") }
     var performanceRatioPercent by remember { mutableStateOf((pvConfig.performanceRatio * 100).toInt().toString()) }
 
+    val baseline by viewModel.baseline.collectAsState()
+
+    var baselineImport by remember { mutableStateOf("") }
+    var baselineExport by remember { mutableStateOf("") }
+    var baselineDate by remember { mutableStateOf("") }
+
     var deviceId by remember { mutableStateOf("") }
     var deviceType by remember { mutableStateOf("smart_plug") }
     var ipAddress by remember { mutableStateOf("") }
@@ -175,6 +181,23 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                 onKioskUrlChange = { kioskUrl = it },
                 onSave = { viewModel.saveKioskUrl(kioskUrl) },
                 onLoad = { viewModel.loadKioskUrl() }
+            )
+        }
+
+        item {
+            BaselineSettingsCard(
+                importKwh = baselineImport.ifBlank { baseline.first },
+                onImportKwhChange = { baselineImport = it },
+                exportKwh = baselineExport.ifBlank { baseline.second },
+                onExportKwhChange = { baselineExport = it },
+                date = baselineDate.ifBlank { baseline.third },
+                onDateChange = { baselineDate = it },
+                onSave = { viewModel.saveBaseline(
+                    baselineImport.ifBlank { baseline.first },
+                    baselineExport.ifBlank { baseline.second },
+                    baselineDate.ifBlank { baseline.third }
+                )},
+                onLoad = { viewModel.loadBaseline() }
             )
         }
 
@@ -588,6 +611,71 @@ private fun KioskUrlCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(text = "Betöltés")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BaselineSettingsCard(
+    importKwh: String,
+    onImportKwhChange: (String) -> Unit,
+    exportKwh: String,
+    onExportKwhChange: (String) -> Unit,
+    date: String,
+    onDateChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onLoad: () -> Unit
+) {
+    SectionCard(icon = Icons.Filled.Save, title = "Elszámolási nyitóértékek (MVM)") {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "A P1 mérőóra kumulált állásai az utolsó hivatalos MVM leolvasás napján. Ezekből számolódik az éves vételezés/visszatáplálás az Energia fül Éves tabján.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = importKwh,
+                onValueChange = { onImportKwhChange(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
+                label = { Text("Nyitó vételezés (kWh)") },
+                placeholder = { Text("8779.0") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = exportKwh,
+                onValueChange = { onExportKwhChange(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
+                label = { Text("Nyitó visszatáplálás (kWh)") },
+                placeholder = { Text("5000.0") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = date,
+                onValueChange = { onDateChange(it) },
+                label = { Text("Leolvasás dátuma") },
+                placeholder = { Text("2026-01-14") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Mentés")
+                }
+                OutlinedButton(
+                    onClick = onLoad,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Betöltés")
                 }
             }
         }

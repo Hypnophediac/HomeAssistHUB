@@ -141,6 +141,17 @@ data class DailySummaryDto(
     val houseDailyKwh: Double = 0.0
 )
 
+data class BaselineData(
+    val baselineImportKwh: Double = 0.0,
+    val baselineExportKwh: Double = 0.0,
+    val baselineDate: String = "",
+    val currentImportTotalKwh: Double = 0.0,
+    val currentExportTotalKwh: Double = 0.0,
+    val yearlyImportKwh: Double = 0.0,
+    val yearlyExportKwh: Double = 0.0,
+    val yearlyBalanceKwh: Double = 0.0
+)
+
 /** Mirrors Open-Meteo's /v1/forecast JSON shape (only the fields we need). */
 @JsonClass(generateAdapter = true)
 data class OpenMeteoHourlyDto(

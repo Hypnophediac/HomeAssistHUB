@@ -8,6 +8,7 @@ import com.homeassisthub.client.data.ClientConfig
 import com.homeassisthub.client.data.ClientConfigStore
 import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
+import com.homeassisthub.client.network.model.BaselineData
 import com.homeassisthub.client.network.model.DailySummaryDto
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
 import com.homeassisthub.client.network.model.LivePowerData
@@ -45,6 +46,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _livePower = MutableStateFlow<LivePowerData?>(null)
     val livePower: StateFlow<LivePowerData?> = _livePower.asStateFlow()
 
+    private val _baseline = MutableStateFlow<BaselineData?>(null)
+    val baseline: StateFlow<BaselineData?> = _baseline.asStateFlow()
+
     private var pollingJob: Job? = null
 
     fun refresh() {
@@ -75,6 +79,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         p1DailyImportKwh = it.optDouble("p1DailyImportKwh", 0.0),
                         p1DailyExportKwh = it.optDouble("p1DailyExportKwh", 0.0),
                         houseDailyKwh = it.optDouble("houseDailyKwh", 0.0)
+                    )
+                }
+                val baselineObj = dataObj?.optJSONObject("baseline")
+                if (baselineObj != null) {
+                    _baseline.value = BaselineData(
+                        baselineImportKwh = baselineObj.optDouble("baselineImportKwh", 0.0),
+                        baselineExportKwh = baselineObj.optDouble("baselineExportKwh", 0.0),
+                        baselineDate = baselineObj.optString("baselineDate", ""),
+                        currentImportTotalKwh = baselineObj.optDouble("currentImportTotalKwh", 0.0),
+                        currentExportTotalKwh = baselineObj.optDouble("currentExportTotalKwh", 0.0),
+                        yearlyImportKwh = baselineObj.optDouble("yearlyImportKwh", 0.0),
+                        yearlyExportKwh = baselineObj.optDouble("yearlyExportKwh", 0.0),
+                        yearlyBalanceKwh = baselineObj.optDouble("yearlyBalanceKwh", 0.0)
                     )
                 }
             }.onFailure {

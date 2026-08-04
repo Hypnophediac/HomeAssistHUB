@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.homeassisthub.client.network.model.BaselineData
 import com.homeassisthub.client.network.model.EnergyDailyResponseDto
 import com.homeassisthub.client.network.model.EnergyPeriodResponseDto
 import com.homeassisthub.client.network.model.LivePowerData
@@ -76,6 +77,7 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
     val liveDailySummary by viewModel.liveDailySummary.collectAsState()
     val pvForecast by viewModel.pvForecast.collectAsState()
     val cloudSyncLastTime by viewModel.cloudSyncLastTime.collectAsState()
+    val baseline by viewModel.baseline.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabTitles = listOf("Napi", "Heti", "Havi", "Éves", "Egyedi")
@@ -185,6 +187,9 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
                 } ?: item { LoadingPlaceholder() }
             }
             3 -> {
+                baseline?.let { bl ->
+                    item { BaselineCard(baseline = bl) }
+                }
                 yearlyData?.let { data ->
                     item { PeriodSummaryCards(data = data) }
                     item {
@@ -494,6 +499,90 @@ private fun ForecastCard(
                 val cloudText = forecast.currentCloudCoverPercent?.let { "${it.toInt()}% felhőzet" } ?: ""
                 Text(
                     text = "Jelenleg: $tempText, $cloudText",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BaselineCard(baseline: BaselineData) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.DateRange,
+                    contentDescription = null,
+                    tint = Color(0xFF8B5CF6),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Éves elszámolás (MVM)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            if (baseline.baselineDate.isNotBlank()) {
+                Text(
+                    text = "Nyitó dátum: ${baseline.baselineDate}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            if (baseline.baselineImportKwh > 0.0 || baseline.baselineExportKwh > 0.0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SummaryCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Idei vételezés",
+                        value = formatKwh(baseline.yearlyImportKwh),
+                        color = Color(0xFFE65100),
+                        icon = Icons.Filled.Bolt
+                    )
+                    SummaryCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Idei visszatáplálás",
+                        value = formatKwh(baseline.yearlyExportKwh),
+                        color = Color(0xFF2E7D32),
+                        icon = Icons.Filled.SolarPower
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LiveStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Éves egyenleg",
+                        value = formatKwh(baseline.yearlyBalanceKwh)
+                    )
+                    LiveStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Jelenlegi óraállás (imp)",
+                        value = "%.1f kWh".format(baseline.currentImportTotalKwh)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                LiveStatCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = "Jelenlegi óraállás (exp)",
+                    value = "%.1f kWh".format(baseline.currentExportTotalKwh)
+                )
+            } else {
+                Text(
+                    text = "Nincs beállítva elszámolási nyitóérték. Hub Beállítások → Elszámolási nyitóértékek (MVM) menüpontban adható meg.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

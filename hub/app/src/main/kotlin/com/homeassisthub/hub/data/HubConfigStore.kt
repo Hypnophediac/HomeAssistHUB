@@ -2,7 +2,15 @@ package com.homeassisthub.hub.data
 
 import android.content.Context
 
-data class HubConfig(val relayUrl: String, val homeId: String, val kioskUrl: String = "", val syncToken: String = "")
+data class HubConfig(
+    val relayUrl: String,
+    val homeId: String,
+    val kioskUrl: String = "",
+    val syncToken: String = "",
+    val baselineImportKwh: Double = 0.0,
+    val baselineExportKwh: Double = 0.0,
+    val baselineDate: String = ""
+)
 
 /**
  * Non-secret hub configuration (which relay to connect to, which home
@@ -18,7 +26,10 @@ class HubConfigStore(context: Context) {
         val homeId = prefs.getString(KEY_HOME_ID, null) ?: return null
         val kioskUrl = prefs.getString(KEY_KIOSK_URL, "") ?: ""
         val syncToken = prefs.getString(KEY_SYNC_TOKEN, "") ?: ""
-        return HubConfig(relayUrl, homeId, kioskUrl, syncToken)
+        val baselineImport = prefs.getFloat(KEY_BASELINE_IMPORT, 0f).toDouble()
+        val baselineExport = prefs.getFloat(KEY_BASELINE_EXPORT, 0f).toDouble()
+        val baselineDate = prefs.getString(KEY_BASELINE_DATE, "") ?: ""
+        return HubConfig(relayUrl, homeId, kioskUrl, syncToken, baselineImport, baselineExport, baselineDate)
     }
 
     fun saveConfig(config: HubConfig) {
@@ -27,6 +38,9 @@ class HubConfigStore(context: Context) {
             .putString(KEY_HOME_ID, config.homeId)
             .putString(KEY_KIOSK_URL, config.kioskUrl)
             .putString(KEY_SYNC_TOKEN, config.syncToken)
+            .putFloat(KEY_BASELINE_IMPORT, config.baselineImportKwh.toFloat())
+            .putFloat(KEY_BASELINE_EXPORT, config.baselineExportKwh.toFloat())
+            .putString(KEY_BASELINE_DATE, config.baselineDate)
             .apply()
     }
 
@@ -68,6 +82,17 @@ class HubConfigStore(context: Context) {
         prefs.edit().putLong(KEY_LAST_SYNC_TIME, timestamp).apply()
     }
 
+    /** Saves the MVM billing baseline (elszámolási nyitóértékek).
+     *  These are the P1 meter cumulative readings on the last official
+     *  MVM reading date, used to compute yearly import/export deltas. */
+    fun saveBaseline(importKwh: Double, exportKwh: Double, date: String) {
+        prefs.edit()
+            .putFloat(KEY_BASELINE_IMPORT, importKwh.toFloat())
+            .putFloat(KEY_BASELINE_EXPORT, exportKwh.toFloat())
+            .putString(KEY_BASELINE_DATE, date)
+            .apply()
+    }
+
     /** Generates and saves a new random sync token (UUID without dashes). */
     fun generateSyncToken(): String {
         val token = java.util.UUID.randomUUID().toString().replace("-", "")
@@ -85,5 +110,8 @@ class HubConfigStore(context: Context) {
         private const val KEY_SYNC_TOKEN = "sync_token"
         private const val KEY_SYNC_CURSOR = "sync_cursor"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
+        private const val KEY_BASELINE_IMPORT = "baseline_import_kwh"
+        private const val KEY_BASELINE_EXPORT = "baseline_export_kwh"
+        private const val KEY_BASELINE_DATE = "baseline_date"
     }
 }

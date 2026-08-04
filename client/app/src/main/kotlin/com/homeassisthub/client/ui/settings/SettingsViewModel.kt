@@ -196,6 +196,48 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private val _baseline = MutableStateFlow<Triple<String, String, String>>(Triple("", "", ""))
+    val baseline: StateFlow<Triple<String, String, String>> = _baseline.asStateFlow()
+
+    fun loadBaseline() {
+        viewModelScope.launch {
+            val cfg = config.value
+            if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) return@launch
+            val manager = ensureSocketConnected(cfg)
+            runCatching {
+                val response = retryCommand(manager, "hub", "get_baseline")
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
+                val data = response.optJSONObject("data")
+                _baseline.value = Triple(
+                    data?.optDouble("baselineImportKwh", 0.0)?.toString() ?: "",
+                    data?.optDouble("baselineExportKwh", 0.0)?.toString() ?: "",
+                    data?.optString("baselineDate", "") ?: ""
+                )
+            }.onFailure { _statusMessage.value = "Baseline lekérdezési hiba: ${it.message}" }
+        }
+    }
+
+    fun saveBaseline(importKwh: String, exportKwh: String, date: String) {
+        viewModelScope.launch {
+            val cfg = config.value
+            if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) {
+                _statusMessage.value = "Előbb add meg a relé URL-t és a homeId-t."
+                return@launch
+            }
+            val manager = ensureSocketConnected(cfg)
+            runCatching {
+                val response = retryCommand(manager, "hub", "save_baseline", mapOf(
+                    "importKwh" to importKwh.replace(",", "."),
+                    "exportKwh" to exportKwh.replace(",", "."),
+                    "date" to date
+                ))
+                if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
+                _statusMessage.value = "Elszámolási nyitóértékek elmentve!"
+                _baseline.value = Triple(importKwh, exportKwh, date)
+            }.onFailure { _statusMessage.value = "Baseline mentési hiba: ${it.message}" }
+        }
+    }
+
     override fun onCleared() {
         socketManager?.disconnect()
         super.onCleared()
