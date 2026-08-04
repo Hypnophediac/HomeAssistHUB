@@ -335,20 +335,43 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Distribute total import/export proportionally to each
+                    // phase's apparent power (V×A). The P1 meter reports total
+                    // import/export and per-phase V and A accurately, but does
+                    // NOT report per-phase import/export direction (always 0).
+                    // V×A ratio is stable and reflects real load per phase.
+                    val totalImp = lp?.importW ?: 0.0
+                    val totalExp = lp?.exportW ?: 0.0
+                    val v1 = lp?.l1V ?: 0.0
+                    val v2 = lp?.l2V ?: 0.0
+                    val v3 = lp?.l3V ?: 0.0
+                    val a1 = lp?.l1A ?: 0.0
+                    val a2 = lp?.l2A ?: 0.0
+                    val a3 = lp?.l3A ?: 0.0
+                    val va1 = v1 * a1
+                    val va2 = v2 * a2
+                    val va3 = v3 * a3
+                    val vaTotal = va1 + va2 + va3
+                    val impL1 = if (vaTotal > 0.0) totalImp * (va1 / vaTotal) else 0.0
+                    val impL2 = if (vaTotal > 0.0) totalImp * (va2 / vaTotal) else 0.0
+                    val impL3 = if (vaTotal > 0.0) totalImp * (va3 / vaTotal) else 0.0
+                    val expL1 = if (vaTotal > 0.0) totalExp * (va1 / vaTotal) else 0.0
+                    val expL2 = if (vaTotal > 0.0) totalExp * (va2 / vaTotal) else 0.0
+                    val expL3 = if (vaTotal > 0.0) totalExp * (va3 / vaTotal) else 0.0
                     PhasePowerChip(
                         label = "L1",
-                        importW = lp?.powerImportL1W ?: 0.0,
-                        exportW = lp?.powerExportL1W ?: 0.0
+                        importW = impL1,
+                        exportW = expL1
                     )
                     PhasePowerChip(
                         label = "L2",
-                        importW = lp?.powerImportL2W ?: 0.0,
-                        exportW = lp?.powerExportL2W ?: 0.0
+                        importW = impL2,
+                        exportW = expL2
                     )
                     PhasePowerChip(
                         label = "L3",
-                        importW = lp?.powerImportL3W ?: 0.0,
-                        exportW = lp?.powerExportL3W ?: 0.0
+                        importW = impL3,
+                        exportW = expL3
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
