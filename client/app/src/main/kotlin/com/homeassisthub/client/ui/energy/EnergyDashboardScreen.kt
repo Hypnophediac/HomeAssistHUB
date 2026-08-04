@@ -187,9 +187,7 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
                 } ?: item { LoadingPlaceholder() }
             }
             3 -> {
-                baseline?.let { bl ->
-                    item { BaselineCard(baseline = bl) }
-                }
+                item { BaselineCard(baseline = baseline) }
                 yearlyData?.let { data ->
                     item { PeriodSummaryCards(data = data) }
                     item {
@@ -508,7 +506,7 @@ private fun ForecastCard(
 }
 
 @Composable
-private fun BaselineCard(baseline: BaselineData) {
+private fun BaselineCard(baseline: BaselineData?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -530,6 +528,14 @@ private fun BaselineCard(baseline: BaselineData) {
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
+            if (baseline == null || (baseline.baselineImportKwh == 0.0 && baseline.baselineExportKwh == 0.0)) {
+                Text(
+                    text = "Nincs beállítva elszámolási nyitóérték. Beállítások → Elszámolási nyitóértékek (MVM) menüpontban adható meg, vagy a Hub Dashboard beállításaiban.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                return@Column
+            }
             if (baseline.baselineDate.isNotBlank()) {
                 Text(
                     text = "Nyitó dátum: ${baseline.baselineDate}",
@@ -538,55 +544,47 @@ private fun BaselineCard(baseline: BaselineData) {
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            if (baseline.baselineImportKwh > 0.0 || baseline.baselineExportKwh > 0.0) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SummaryCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Idei vételezés",
-                        value = formatKwh(baseline.yearlyImportKwh),
-                        color = Color(0xFFE65100),
-                        icon = Icons.Filled.Bolt
-                    )
-                    SummaryCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Idei visszatáplálás",
-                        value = formatKwh(baseline.yearlyExportKwh),
-                        color = Color(0xFF2E7D32),
-                        icon = Icons.Filled.SolarPower
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    LiveStatCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Éves egyenleg",
-                        value = formatKwh(baseline.yearlyBalanceKwh)
-                    )
-                    LiveStatCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Jelenlegi óraállás (imp)",
-                        value = "%.1f kWh".format(baseline.currentImportTotalKwh)
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                LiveStatCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    title = "Jelenlegi óraállás (exp)",
-                    value = "%.1f kWh".format(baseline.currentExportTotalKwh)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SummaryCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Idei vételezés",
+                    value = formatKwh(baseline.yearlyImportKwh),
+                    color = Color(0xFFE65100),
+                    icon = Icons.Filled.Bolt
                 )
-            } else {
-                Text(
-                    text = "Nincs beállítva elszámolási nyitóérték. Hub Beállítások → Elszámolási nyitóértékek (MVM) menüpontban adható meg.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                SummaryCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Idei visszatáplálás",
+                    value = formatKwh(baseline.yearlyExportKwh),
+                    color = Color(0xFF2E7D32),
+                    icon = Icons.Filled.SolarPower
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                LiveStatCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Éves egyenleg",
+                    value = formatKwh(baseline.yearlyBalanceKwh)
+                )
+                LiveStatCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Jelenlegi óraállás (imp)",
+                    value = "%.1f kWh".format(baseline.currentImportTotalKwh)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            LiveStatCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = "Jelenlegi óraállás (exp)",
+                value = "%.1f kWh".format(baseline.currentExportTotalKwh)
+            )
         }
     }
 }

@@ -183,12 +183,42 @@ class EnergyViewModel(application: Application) : AndroidViewModel(application) 
                 runCatching {
                     val resp = manager.sendCommand("hub", "get_p1_history", mapOf("limit" to limit))
                     if (resp.optBoolean("success")) {
-                        val readingsJson = resp.optJSONObject("data")?.optJSONArray("readings")
+                        val dataObj = resp.optJSONObject("data")
+                        val readingsJson = dataObj?.optJSONArray("readings")
                         val readings = JsonParsing.parseList(readingsJson, P1ReadingDto::class.java)
                         if (readings.isNotEmpty()) {
                             _livePower.value = LivePowerData.fromReading(readings.last())
                             if (limit == "5") {
                                 _liveReadings.value = readings
+                            }
+                        }
+                        // Parse baseline on every 30s tick (when limit=5)
+                        if (limit == "5") {
+                            val baselineObj = dataObj?.optJSONObject("baseline")
+                            if (baselineObj != null) {
+                                _baseline.value = BaselineData(
+                                    baselineImportKwh = baselineObj.optDouble("baselineImportKwh", 0.0),
+                                    baselineExportKwh = baselineObj.optDouble("baselineExportKwh", 0.0),
+                                    baselineDate = baselineObj.optString("baselineDate", ""),
+                                    currentImportTotalKwh = baselineObj.optDouble("currentImportTotalKwh", 0.0),
+                                    currentExportTotalKwh = baselineObj.optDouble("currentExportTotalKwh", 0.0),
+                                    yearlyImportKwh = baselineObj.optDouble("yearlyImportKwh", 0.0),
+                                    yearlyExportKwh = baselineObj.optDouble("yearlyExportKwh", 0.0),
+                                    yearlyBalanceKwh = baselineObj.optDouble("yearlyBalanceKwh", 0.0)
+                                )
+                            }
+                            val summaryJson = dataObj?.optJSONObject("dailySummary")
+                            if (summaryJson != null) {
+                                _liveDailySummary.value = DailySummaryDto(
+                                    inverterDailyKwh = summaryJson.optDouble("inverterDailyKwh", 0.0),
+                                    p1DailyImportKwh = summaryJson.optDouble("p1DailyImportKwh", 0.0),
+                                    p1DailyExportKwh = summaryJson.optDouble("p1DailyExportKwh", 0.0),
+                                    houseDailyKwh = summaryJson.optDouble("houseDailyKwh", 0.0)
+                                )
+                            }
+                            val cloudSyncObj = dataObj?.optJSONObject("cloudSync")
+                            if (cloudSyncObj != null) {
+                                _cloudSyncLastTime.value = cloudSyncObj.optLong("lastSyncTime", 0L)
                             }
                         }
                     }
