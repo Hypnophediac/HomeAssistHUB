@@ -97,47 +97,16 @@ data class P1MeterResponse(
     val l2A: Double get() = l2AStr.toDoubleOrNull() ?: 0.0
     val l3A: Double get() = l3AStr.toDoubleOrNull() ?: 0.0
 
-    // Per-phase power: if meter reports 0, compute from V×I×powerFactor
-    // Direction determined by total import/export: if exporting, phase power = export; if importing, = import
-    internal val isExporting: Boolean get() = powerExportW > powerImportW
-    internal val isImporting: Boolean get() = powerImportW > powerExportW
-
-    val powerImportL1W: Double get() {
-        val raw = (powerImportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        if (raw > 0.0) return raw
-        if (!isImporting) return 0.0
-        return l1V * l1A * powerFactorL1
-    }
-    val powerImportL2W: Double get() {
-        val raw = (powerImportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        if (raw > 0.0) return raw
-        if (!isImporting) return 0.0
-        return l2V * l2A * powerFactorL2
-    }
-    val powerImportL3W: Double get() {
-        val raw = (powerImportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        if (raw > 0.0) return raw
-        if (!isImporting) return 0.0
-        return l3V * l3A * powerFactorL3
-    }
-    val powerExportL1W: Double get() {
-        val raw = (powerExportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        if (raw > 0.0) return raw
-        if (!isExporting) return 0.0
-        return l1V * l1A * powerFactorL1
-    }
-    val powerExportL2W: Double get() {
-        val raw = (powerExportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        if (raw > 0.0) return raw
-        if (!isExporting) return 0.0
-        return l2V * l2A * powerFactorL2
-    }
-    val powerExportL3W: Double get() {
-        val raw = (powerExportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        if (raw > 0.0) return raw
-        if (!isExporting) return 0.0
-        return l3V * l3A * powerFactorL3
-    }
+    // Per-phase power: trust meter values directly.
+    // Do NOT fall back to V×I×PF using total direction — in 3-phase systems
+    // with asymmetric loads, individual phases can import while others export
+    // simultaneously. The total direction cannot determine per-phase direction.
+    val powerImportL1W: Double get() = (powerImportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+    val powerImportL2W: Double get() = (powerImportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+    val powerImportL3W: Double get() = (powerImportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+    val powerExportL1W: Double get() = (powerExportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+    val powerExportL2W: Double get() = (powerExportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+    val powerExportL3W: Double get() = (powerExportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
 
     val powerFactor: Double get() = powerFactorStr.toDoubleOrNull() ?: 0.0
     val powerFactorL1: Double get() = powerFactorL1Str.toDoubleOrNull() ?: 0.0
