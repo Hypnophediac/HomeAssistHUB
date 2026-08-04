@@ -177,10 +177,28 @@ data class P1MeterResponse(
         return if (phaseDirections()[2] == -1) p else 0.0
     }
 
-    val powerFactor: Double get() = powerFactorStr.toDoubleOrNull() ?: 0.0
-    val powerFactorL1: Double get() = powerFactorL1Str.toDoubleOrNull() ?: 0.0
-    val powerFactorL2: Double get() = powerFactorL2Str.toDoubleOrNull() ?: 0.0
-    val powerFactorL3: Double get() = powerFactorL3Str.toDoubleOrNull() ?: 0.0
+    val powerFactor: Double get() {
+        val pf = powerFactorStr.toDoubleOrNull() ?: 0.0
+        return if (pf > 0.0) pf else 1.0
+    }
+    val powerFactorL1: Double get() {
+        val pf = powerFactorL1Str.toDoubleOrNull() ?: 0.0
+        if (pf > 0.0) return pf
+        val total = powerFactorStr.toDoubleOrNull() ?: 0.0
+        return if (total > 0.0) total else 1.0
+    }
+    val powerFactorL2: Double get() {
+        val pf = powerFactorL2Str.toDoubleOrNull() ?: 0.0
+        if (pf > 0.0) return pf
+        val total = powerFactorStr.toDoubleOrNull() ?: 0.0
+        return if (total > 0.0) total else 1.0
+    }
+    val powerFactorL3: Double get() {
+        val pf = powerFactorL3Str.toDoubleOrNull() ?: 0.0
+        if (pf > 0.0) return pf
+        val total = powerFactorStr.toDoubleOrNull() ?: 0.0
+        return if (total > 0.0) total else 1.0
+    }
 
     val frequencyHz: Double get() = frequencyStr.toDoubleOrNull() ?: 50.0
 
