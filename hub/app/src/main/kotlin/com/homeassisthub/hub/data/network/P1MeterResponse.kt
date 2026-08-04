@@ -38,6 +38,11 @@ data class P1MeterResponse(
     @Json(name = "current_phase_l2") val l2AStr: String = "0.0",
     @Json(name = "current_phase_l3") val l3AStr: String = "0.0",
 
+    // ── Per-phase balanced current (A) — accounts for actual power flow ──
+    @Json(name = "current_phase_Bl1") val bl1AStr: String = "0.0",
+    @Json(name = "current_phase_Bl2") val bl2AStr: String = "0.0",
+    @Json(name = "current_phase_Bl3") val bl3AStr: String = "0.0",
+
     // ── Per-phase power (kW → multiply by 1000 for W) ──
     @Json(name = "instantaneous_power_import_l1") val powerImportL1KwStr: String = "0.000",
     @Json(name = "instantaneous_power_import_l2") val powerImportL2KwStr: String = "0.000",
@@ -97,6 +102,20 @@ data class P1MeterResponse(
     val l2A: Double get() = l2AStr.toDoubleOrNull() ?: 0.0
     val l3A: Double get() = l3AStr.toDoubleOrNull() ?: 0.0
 
+    // Balanced current — use Bl values if available, fall back to l values
+    val bl1A: Double get() {
+        val bl = bl1AStr.toDoubleOrNull() ?: 0.0
+        return if (bl > 0.0) bl else l1A
+    }
+    val bl2A: Double get() {
+        val bl = bl2AStr.toDoubleOrNull() ?: 0.0
+        return if (bl > 0.0) bl else l2A
+    }
+    val bl3A: Double get() {
+        val bl = bl3AStr.toDoubleOrNull() ?: 0.0
+        return if (bl > 0.0) bl else l3A
+    }
+
     // Per-phase power: use meter values if reported (>0). Otherwise fall back to
     // V×I×PF and determine per-phase direction by trying all 8 import/export
     // combinations and picking the one that best matches total import/export.
@@ -105,9 +124,9 @@ data class P1MeterResponse(
         val totalExp = powerExportW
         if (totalImp <= 0.0 && totalExp <= 0.0) return intArrayOf(0, 0, 0)
 
-        val p1 = l1V * l1A * powerFactorL1
-        val p2 = l2V * l2A * powerFactorL2
-        val p3 = l3V * l3A * powerFactorL3
+        val p1 = l1V * bl1A * powerFactorL1
+        val p2 = l2V * bl2A * powerFactorL2
+        val p3 = l3V * bl3A * powerFactorL3
         if (p1 <= 0.0 && p2 <= 0.0 && p3 <= 0.0) return intArrayOf(0, 0, 0)
 
         val powers = doubleArrayOf(p1, p2, p3)
@@ -137,42 +156,42 @@ data class P1MeterResponse(
     val powerImportL1W: Double get() {
         val raw = (powerImportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
         if (raw > 0.0) return raw
-        val p = l1V * l1A * powerFactorL1
+        val p = l1V * bl1A * powerFactorL1
         if (p <= 0.0) return 0.0
         return if (phaseDirections()[0] == 1) p else 0.0
     }
     val powerImportL2W: Double get() {
         val raw = (powerImportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
         if (raw > 0.0) return raw
-        val p = l2V * l2A * powerFactorL2
+        val p = l2V * bl2A * powerFactorL2
         if (p <= 0.0) return 0.0
         return if (phaseDirections()[1] == 1) p else 0.0
     }
     val powerImportL3W: Double get() {
         val raw = (powerImportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
         if (raw > 0.0) return raw
-        val p = l3V * l3A * powerFactorL3
+        val p = l3V * bl3A * powerFactorL3
         if (p <= 0.0) return 0.0
         return if (phaseDirections()[2] == 1) p else 0.0
     }
     val powerExportL1W: Double get() {
         val raw = (powerExportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
         if (raw > 0.0) return raw
-        val p = l1V * l1A * powerFactorL1
+        val p = l1V * bl1A * powerFactorL1
         if (p <= 0.0) return 0.0
         return if (phaseDirections()[0] == -1) p else 0.0
     }
     val powerExportL2W: Double get() {
         val raw = (powerExportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
         if (raw > 0.0) return raw
-        val p = l2V * l2A * powerFactorL2
+        val p = l2V * bl2A * powerFactorL2
         if (p <= 0.0) return 0.0
         return if (phaseDirections()[1] == -1) p else 0.0
     }
     val powerExportL3W: Double get() {
         val raw = (powerExportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
         if (raw > 0.0) return raw
-        val p = l3V * l3A * powerFactorL3
+        val p = l3V * bl3A * powerFactorL3
         if (p <= 0.0) return 0.0
         return if (phaseDirections()[2] == -1) p else 0.0
     }
