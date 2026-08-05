@@ -729,7 +729,13 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
 
         drawContext.canvas.nativeCanvas.restore()
 
-        // Draw X-axis time labels after restore (outside clip so always visible)
+        // Draw X-axis time labels after restore (outside clip so always visible).
+        // Labels are only drawn if there's enough measured pixel room since the
+        // last drawn label — this guarantees no overlap at any zoom level,
+        // instead of relying on a fixed minute-step that can produce gaps
+        // narrower than the text itself right at zoom thresholds.
+        val minLabelGapPx = with(density) { 6.dp.toPx() }
+        var lastLabelRight = Float.NEGATIVE_INFINITY
         minute = 0
         while (minute <= totalMinutes) {
             val ms = minute * 60_000L
@@ -738,12 +744,17 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
                 val h = minute / 60
                 val m = minute % 60
                 val label = if (m == 0) "%02d:00".format(h) else "%02d:%02d".format(h, m)
-                drawContext.canvas.nativeCanvas.drawText(
-                    label,
-                    x,
-                    chartH + xLabelH - yLabelPaddingPx,
-                    xPaint
-                )
+                val textWidth = xPaint.measureText(label)
+                val left = x - textWidth / 2f
+                if (left > lastLabelRight + minLabelGapPx) {
+                    drawContext.canvas.nativeCanvas.drawText(
+                        label,
+                        x,
+                        chartH + xLabelH - yLabelPaddingPx,
+                        xPaint
+                    )
+                    lastLabelRight = x + textWidth / 2f
+                }
             }
             minute += labelStepMinutes
         }

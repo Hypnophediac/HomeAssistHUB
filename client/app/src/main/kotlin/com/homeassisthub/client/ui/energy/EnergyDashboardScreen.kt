@@ -1098,14 +1098,18 @@ private fun ZoomableEnergyColumnChart(
         drawLine(color = axisColor, start = Offset(labelW, 0f), end = Offset(labelW, chartH), strokeWidth = 1.5f)
         drawLine(color = axisColor, start = Offset(labelW, chartH), end = Offset(canvasW, chartH), strokeWidth = 1.5f)
 
-        val visibleGroupCount = if (barGroupW > 0f) (chartW / barGroupW).toInt() + 2 else labels.size
-        val labelEvery = if (visibleGroupCount <= 12) 1 else kotlin.math.max(1, visibleGroupCount / 8)
         val xPaint = android.graphics.Paint().apply {
             color = labelColor.toArgb()
             textSize = axisFontSizePx
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
         }
+        // Only draw a label if there's enough measured pixel room since the
+        // last drawn one — avoids overlapping/unreadable labels at any zoom
+        // level instead of relying on a fixed "every N bars" heuristic that
+        // can produce gaps narrower than the text right at count thresholds.
+        val minLabelGapPx = with(density) { 6.dp.toPx() }
+        var lastLabelRight = Float.NEGATIVE_INFINITY
 
         clipRect(left = labelW, top = 0f, right = canvasW, bottom = size.height) {
             consumedValues.forEachIndexed { index, consumed ->
@@ -1126,13 +1130,18 @@ private fun ZoomableEnergyColumnChart(
                     size = Size(barW, exportedH)
                 )
 
-                if (index % labelEvery == 0) {
+                val label = labels.getOrElse(index) { "" }
+                val labelX = groupX + barGroupW / 2f
+                val textWidth = xPaint.measureText(label)
+                val left = labelX - textWidth / 2f
+                if (left > lastLabelRight + minLabelGapPx) {
                     drawContext.canvas.nativeCanvas.drawText(
-                        labels.getOrElse(index) { "" },
-                        groupX + barGroupW / 2f,
+                        label,
+                        labelX,
                         chartH + xLabelH - yLabelPaddingPx,
                         xPaint
                     )
+                    lastLabelRight = labelX + textWidth / 2f
                 }
             }
         }
