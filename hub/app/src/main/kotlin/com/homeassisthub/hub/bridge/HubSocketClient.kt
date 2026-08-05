@@ -40,7 +40,11 @@ class HubSocketClient(
             reconnectionDelay = 2_000
             reconnectionDelayMax = 15_000
             timeout = 10_000
-            transports = arrayOf("websocket")
+            // Do NOT restrict to "websocket" only — many mobile carrier
+            // networks/NAT proxies block or break the WebSocket upgrade
+            // handshake over cellular data, while HTTP long-polling works
+            // everywhere. Leaving transports unset lets Socket.IO start
+            // with polling and upgrade to websocket only if it succeeds.
         }
 
         val sock = IO.socket(java.net.URI.create(relayUrl), options)
