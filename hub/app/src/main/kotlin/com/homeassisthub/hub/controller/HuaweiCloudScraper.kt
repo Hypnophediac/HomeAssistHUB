@@ -137,6 +137,24 @@ class HuaweiCloudScraper(
         // Cache the synchronized consumption + daily yield for CommandRouter
         InverterLiveData.updateRealConsumption(realConsumptionW, dailyEnergyKwh)
 
+        // Store real-time power as a history point with current timestamp.
+        // The Kiosk powerCurve can be stale (hours behind), but realTimePower
+        // is current. Without this, findInverterPower returns 0 for recent
+        // P1 readings because inverter_history has no recent entries.
+        if (activePowerW > 0.0) {
+            scope.launch {
+                runCatching {
+                    InverterHistoryDaoHolder.dao?.insert(
+                        com.homeassisthub.hub.data.db.InverterHistoryEntity(
+                            timestamp = System.currentTimeMillis(),
+                            activePowerW = activePowerW
+                        )
+                    )
+                    Log.i(TAG, "Stored realtime inverter point: ${activePowerW.toInt()}W")
+                }.onFailure { Log.w(TAG, "Failed to store realtime point: ${it.message}") }
+            }
+        }
+
         // Also store today's power curve as history points
         val powerCurve = data.optJSONObject("powerCurve")
         if (powerCurve != null) {
