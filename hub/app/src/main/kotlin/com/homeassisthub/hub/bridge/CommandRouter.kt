@@ -163,7 +163,7 @@ class CommandRouter(
             val inverterByTime = inverterHistory.associate { it.timestamp to it.activePowerW }
             fun findInverterPower(ts: Long): Double {
                 inverterByTime[ts]?.let { return it }
-                val tolerance = 300_000L
+                val tolerance = 600_000L
                 var bestPower = 0.0
                 var bestDiff = Long.MAX_VALUE
                 for (entry in inverterByTime) {
