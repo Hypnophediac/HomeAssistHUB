@@ -136,7 +136,14 @@ class CommandRouter(
         }
         "get_p1_history" -> {
             val limit = params["limit"]?.toIntOrNull() ?: 100
-            val readings = p1Dao.getRecent(limit)
+            // p1Dao.getRecent() returns DESC order (newest first). Reverse to
+            // ASC (chronological) here — every consumer (client's readings.last()
+            // for FreshnessBadge/livePower, P1HistoryChart, isLatest=lastIndex
+            // below) assumes ASC order. Without this, readings.last() on the
+            // client picks the OLDEST of the batch (e.g. 24h-old for limit=1440),
+            // causing the live power UI to flicker to stale/zero values every
+            // time the 30s full-history poll lands.
+            val readings = p1Dao.getRecent(limit).asReversed()
 
             // The HuaweiCloudScraper computes a synchronized realConsumptionW
             // using T-5min P1 data (matching the Kiosk API delay) and caches it
@@ -188,27 +195,11 @@ class CommandRouter(
             val rInverterDaily = Math.round(inverterDailyKwh * 100.0) / 100.0
             val houseDailyKwh = maxOf(0.0, rInverterDaily + p1DailyImportKwh - p1DailyExportKwh)
 
-            // Debug: log inverterPowerW for first, middle, last readings
-            val mapped = readings.mapIndexed { index, it ->
-                val isLatest = index == 0
-                val hip = if (isLatest) inverterPowerW else findInverterPower(it.timestamp)
-                Triple(index, it.timestamp, hip)
-            }
-            if (mapped.isNotEmpty()) {
-                val first = mapped.first()
-                val mid = mapped[mapped.size / 2]
-                val last = mapped.last()
-                android.util.Log.i("CommandRouter", "get_p1_history: ${readings.size} readings, invHist=${inverterHistory.size} pts, " +
-                    "first[idx=${first.first} ts=${first.second} inv=${first.third}W] " +
-                    "mid[idx=${mid.first} ts=${mid.second} inv=${mid.third}W] " +
-                    "last[idx=${last.first} ts=${last.second} inv=${last.third}W] " +
-                    "latestInvPower=$inverterPowerW fresh=$inverterFresh")
-            }
             CommandResult.Success(
                 mapOf(
                     "readings" to readings.mapIndexed { index, it ->
-                        // getRecent() returns DESC order (newest first), so index 0 is latest
-                        val isLatest = index == 0
+                        // readings is now ASC order (chronological), so lastIndex is latest
+                        val isLatest = index == readings.lastIndex
                         val histInverterPower = if (isLatest) inverterPowerW else findInverterPower(it.timestamp)
                         val hasInverterData = if (isLatest) inverterFresh else (histInverterPower > 0.0)
                         val realConsumptionW = if (isLatest) {
