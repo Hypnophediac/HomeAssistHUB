@@ -154,14 +154,53 @@ data class P1MeterResponse(
         if (totalImp <= 0.0 && totalExp <= 0.0) {
             return 0.0 to 0.0
         }
-        // Mixed: proportional split based on this phase's share of total power
+        // Mixed: each phase is EITHER importing OR exporting, not both.
+        // Brute-force all 8 assignments (2^3 phases) and pick the one where
+        // sum(import phases) best matches totalImp and sum(export phases) best matches totalExp.
         val p1 = l1V * bl1A * powerFactorL1
         val p2 = l2V * bl2A * powerFactorL2
         val p3 = l3V * bl3A * powerFactorL3
-        val pTotal = p1 + p2 + p3
-        if (pTotal <= 0.0) return 0.0 to 0.0
-        val ratio = p / pTotal
-        return (totalImp * ratio) to (totalExp * ratio)
+        val phases = doubleArrayOf(p1, p2, p3)
+        if (phases.all { it <= 0.0 }) return 0.0 to 0.0
+
+        var bestErr = Double.MAX_VALUE
+        var bestAssignment = intArrayOf(0, 0, 0) // 0=import, 1=export per phase
+        for (mask in 0..7) {
+            var impSum = 0.0
+            var expSum = 0.0
+            for (pi in 0..2) {
+                if (phases[pi] <= 0.0) continue
+                if ((mask shr pi) and 1 == 0) impSum += phases[pi] else expSum += phases[pi]
+            }
+            // Scale to match totals
+            val impScale = if (impSum > 0.0) totalImp / impSum else 0.0
+            val expScale = if (expSum > 0.0) totalExp / expSum else 0.0
+            val err = kotlin.math.abs(impSum * impScale - totalImp) + kotlin.math.abs(expSum * expScale - totalExp)
+            // Prefer assignments where impSum/expSum are close to totals before scaling
+            val rawErr = kotlin.math.abs(impSum - totalImp) + kotlin.math.abs(expSum - totalExp)
+            val combinedErr = rawErr + err * 0.01
+            if (combinedErr < bestErr) {
+                bestErr = combinedErr
+                bestAssignment = intArrayOf((mask shr 0) and 1, (mask shr 1) and 1, (mask shr 2) and 1)
+            }
+        }
+
+        val phaseIdx = lx - 1
+        val isExport = bestAssignment[phaseIdx] == 1
+        val impScale = if (bestAssignment.count { it == 0 } > 0) {
+            val impSum = phases.filterIndexed { i, _ -> bestAssignment[i] == 0 }.sum()
+            if (impSum > 0.0) totalImp / impSum else 0.0
+        } else 0.0
+        val expScale = if (bestAssignment.count { it == 1 } > 0) {
+            val expSum = phases.filterIndexed { i, _ -> bestAssignment[i] == 1 }.sum()
+            if (expSum > 0.0) totalExp / expSum else 0.0
+        } else 0.0
+
+        return if (isExport) {
+            0.0 to (p * expScale)
+        } else {
+            (p * impScale) to 0.0
+        }
     }
 
     val powerImportL1W: Double get() = phasePower(1).first

@@ -711,13 +711,32 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
                 isAntiAlias = true
                 style = android.graphics.Paint.Style.STROKE
                 strokeWidth = 2f
+                strokeJoin = android.graphics.Paint.Join.ROUND
+                strokeCap = android.graphics.Paint.Cap.ROUND
             }
             val path = android.graphics.Path()
-            for (i in todayReadings.indices) {
-                val r = todayReadings[i]
+            val pts = todayReadings.map { r ->
                 val x = timeToX(r.timestamp)
                 val y = chartH - (series(r) / niceMax * chartH)
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                androidx.compose.ui.geometry.Offset(x, y)
+            }
+            if (pts.size == 2) {
+                path.moveTo(pts[0].x, pts[0].y)
+                path.lineTo(pts[1].x, pts[1].y)
+            } else {
+                // Catmull-Rom spline → cubic bezier for smooth curves
+                path.moveTo(pts[0].x, pts[0].y)
+                for (i in 0 until pts.size - 1) {
+                    val p0 = pts[if (i == 0) 0 else i - 1]
+                    val p1 = pts[i]
+                    val p2 = pts[i + 1]
+                    val p3 = pts[if (i + 2 < pts.size) i + 2 else i + 1]
+                    val c1x = p1.x + (p2.x - p0.x) / 6f
+                    val c1y = p1.y + (p2.y - p0.y) / 6f
+                    val c2x = p2.x - (p3.x - p1.x) / 6f
+                    val c2y = p2.y - (p3.y - p1.y) / 6f
+                    path.cubicTo(c1x, c1y, c2x, c2y, p2.x, p2.y)
+                }
             }
             drawContext.canvas.nativeCanvas.drawPath(path, paint)
         }
