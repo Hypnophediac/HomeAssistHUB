@@ -9,6 +9,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.app.ActivityManager
 import android.content.Context
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -107,22 +108,57 @@ class MainActivity : ComponentActivity() {
 
     private fun requestIgnoreBatteryOptimizationsIfNeeded() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            Log.i("Hub/Battery", "Already ignoring battery optimizations — no action needed")
+            return
+        }
+        Log.w("Hub/Battery", "App is NOT exempt from battery optimizations — requesting exemption")
+
+        // 1) Standard Android dialog
+        var standardDialogShown = false
+        try {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:$packageName")
+                setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            standardDialogShown = true
+            Log.i("Hub/Battery", "Standard battery optimization dialog launched")
+        } catch (e: Exception) {
+            Log.w("Hub/Battery", "Standard dialog failed: ${e.message}")
+        }
+
+        // 2) MIUI/HyperOS: the standard dialog is often silently swallowed.
+        //    Open MIUI's own battery saver settings so the user can manually
+        //    set the app to "No restrictions".
+        if (!standardDialogShown || isMiui()) {
             try {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:$packageName")
+                val miuiIntent = Intent("miui.intent.action.POWER_KEEP_APP").apply {
                     setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                startActivity(intent)
-            } catch (_: Exception) {
-                // Some MIUI/HyperOS builds don't support this intent; fall back
-                // to the general battery optimization settings page.
-                try {
-                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                } catch (_: Exception) { /* give up silently */ }
+                startActivity(miuiIntent)
+                Log.i("Hub/Battery", "MIUI battery saver settings launched")
+                return
+            } catch (_: Exception) { }
+
+            // 3) Fallback: general Android battery optimization list
+            try {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                Log.i("Hub/Battery", "Standard battery optimization settings list launched")
+            } catch (e: Exception) {
+                Log.e("Hub/Battery", "All battery exemption attempts failed: ${e.message}")
             }
         }
+    }
+
+    private fun isMiui(): Boolean {
+        return try {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val get = clazz.getMethod("get", String::class.java)
+            val miui = get.invoke(null, "ro.miui.ui.version.name") as? String
+            miui != null && miui.isNotBlank()
+        } catch (_: Exception) { false }
     }
 }
 
