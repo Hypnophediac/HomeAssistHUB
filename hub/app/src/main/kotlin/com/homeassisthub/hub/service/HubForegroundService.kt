@@ -149,6 +149,27 @@ class HubForegroundService : Service() {
      *  Client dashboard chart has something to display. */
     private fun startP1MeterPollers() {
         if (p1Pollers.isNotEmpty()) return // already started
+
+        // Restore today's midnight baseline from DB so daily kWh deltas survive app restarts
+        serviceScope.launch {
+            val cal = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }
+            val midnightMs = cal.timeInMillis
+            val endOfDay = midnightMs + 86_400_000L
+            val firstReading = p1RawDao.getFirstInRange(midnightMs, endOfDay)
+            if (firstReading != null) {
+                com.homeassisthub.hub.controller.P1HistoryBuffer.restoreBaselineIfNeeded(
+                    timestamp = firstReading.timestamp,
+                    importTotalKwh = firstReading.importTotalKwh,
+                    exportTotalKwh = firstReading.exportTotalKwh
+                )
+            }
+        }
+
         val p1Credentials = credentialStore.getAllCredentials()
             .filter { it.deviceType == DeviceControllerFactory.DEVICE_TYPE_P1_METER }
 

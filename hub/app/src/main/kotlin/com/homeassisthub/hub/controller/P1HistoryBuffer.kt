@@ -98,6 +98,32 @@ object P1HistoryBuffer {
     }
 
     /**
+     * Restores the midnight baseline from a persisted reading (e.g. from DB)
+     * when the app restarts mid-day and the in-memory baseline was lost.
+     * Only sets it if we don't already have one for today.
+     */
+    fun restoreBaselineIfNeeded(
+        timestamp: Long,
+        importTotalKwh: Double,
+        exportTotalKwh: Double
+    ) {
+        lock.write {
+            val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+            val day = cal.get(Calendar.DAY_OF_YEAR)
+            if (day == baselineDay && midnightBaseline != null) return@write // already have it
+            baselineDay = day
+            midnightBaseline = P1Snapshot(
+                timestamp = timestamp,
+                powerImportW = 0.0,
+                powerExportW = 0.0,
+                importTotalKwh = importTotalKwh,
+                exportTotalKwh = exportTotalKwh
+            )
+            android.util.Log.i("P1HistoryBuffer", "Restored baseline from DB: import=${importTotalKwh}kWh export=${exportTotalKwh}kWh ts=$timestamp")
+        }
+    }
+
+    /**
      * Returns the daily import/export kWh deltas computed from the midnight baseline.
      * If no baseline exists yet (first reading of the day), returns the current cumulative values.
      */
