@@ -114,24 +114,10 @@ class MainActivity : ComponentActivity() {
         }
         Log.w("Hub/Battery", "App is NOT exempt from battery optimizations — requesting exemption")
 
-        // 1) Standard Android dialog
-        var standardDialogShown = false
-        try {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:$packageName")
-                setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-            standardDialogShown = true
-            Log.i("Hub/Battery", "Standard battery optimization dialog launched")
-        } catch (e: Exception) {
-            Log.w("Hub/Battery", "Standard dialog failed: ${e.message}")
-        }
-
-        // 2) MIUI/HyperOS: the standard dialog is often silently swallowed.
-        //    Open MIUI's own battery saver settings so the user can manually
-        //    set the app to "No restrictions".
-        if (!standardDialogShown || isMiui()) {
+        if (isMiui()) {
+            // MIUI/HyperOS silently swallows the standard Android dialog.
+            // Go straight to MIUI's own battery saver settings where the
+            // user can manually set this app to "No restrictions".
             try {
                 val miuiIntent = Intent("miui.intent.action.POWER_KEEP_APP").apply {
                     setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -139,15 +125,32 @@ class MainActivity : ComponentActivity() {
                 startActivity(miuiIntent)
                 Log.i("Hub/Battery", "MIUI battery saver settings launched")
                 return
-            } catch (_: Exception) { }
-
-            // 3) Fallback: general Android battery optimization list
+            } catch (e: Exception) {
+                Log.w("Hub/Battery", "MIUI POWER_KEEP_APP intent failed: ${e.message}")
+            }
+            // Fallback: general Android battery optimization list
             try {
                 startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 Log.i("Hub/Battery", "Standard battery optimization settings list launched")
             } catch (e: Exception) {
                 Log.e("Hub/Battery", "All battery exemption attempts failed: ${e.message}")
+            }
+        } else {
+            // Standard Android: show the system dialog
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                    setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+                Log.i("Hub/Battery", "Standard battery optimization dialog launched")
+            } catch (e: Exception) {
+                Log.w("Hub/Battery", "Standard dialog failed: ${e.message}")
+                try {
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) { }
             }
         }
     }
