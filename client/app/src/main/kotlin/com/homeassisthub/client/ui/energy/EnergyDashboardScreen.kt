@@ -1034,24 +1034,28 @@ private fun ZoomableEnergyColumnChart(
     val yLabelWidthPx = with(density) { 44.dp.toPx() }
 
     val maxDataValue = maxOf(
-        consumedValues.maxOrNull()?.toFloat() ?: 1f,
-        exportedValues.maxOrNull()?.toFloat() ?: 1f
+        consumedValues.maxOrNull()?.toFloat() ?: 0f,
+        exportedValues.maxOrNull()?.toFloat() ?: 0f
     )
-    val niceMax = maxOf(maxDataValue * 1.15f, 0.1f)
+    // Fixed Y-axis scale: round up to nearest 0.5 kWh, minimum 1.0
+    val niceMax = maxOf(
+        kotlin.math.ceil(maxDataValue * 1.15f * 2f) / 2f,
+        1.0f
+    )
 
     androidx.compose.foundation.Canvas(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
             .padding(top = 8.dp)
-            .pointerInput(labels) {
+            .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
                     val newScale = (scale * zoom).coerceIn(MIN_CHART_SCALE, MAX_CHART_SCALE)
                     scale = newScale
                     offsetX += pan.x
                 }
             }
-            .pointerInput(labels) {
+            .pointerInput(Unit) {
                 detectTapGestures(onDoubleTap = {
                     scale = MIN_CHART_SCALE
                     offsetX = 0f
@@ -1088,7 +1092,7 @@ private fun ZoomableEnergyColumnChart(
                 strokeWidth = 1f
             )
             drawContext.canvas.nativeCanvas.drawText(
-                String.format(java.util.Locale.US, "%.1f", value),
+                String.format(java.util.Locale.US, "%.2f", value),
                 labelW - yLabelPaddingPx,
                 y + axisFontSizePx / 3f,
                 yPaint
