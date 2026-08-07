@@ -98,8 +98,9 @@ function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalE
 
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
-// Returns peak power (kW) per hour — the maximum instantaneous power recorded
-// during that hour. This makes short spikes (e.g. boiler) visible on the chart.
+// Returns both:
+// - consumedKwh / exportedKwh: actual energy (kWh) for that hour (for totals)
+// - peakImportKw / peakExportKw: max instantaneous power (kW) for that hour (for chart spikes)
 function computeHourlyBuckets(readings: any[]): any[] {
   const buckets: Record<number, any[]> = {};
   for (const r of readings) {
@@ -115,9 +116,24 @@ function computeHourlyBuckets(readings: any[]): any[] {
         maxImportW = Math.max(maxImportW, r.powerImportW || 0);
         maxExportW = Math.max(maxExportW, r.powerExportW || 0);
       }
-      return { hour: h, consumedKwh: maxImportW / 1000, exportedKwh: maxExportW / 1000 };
+      // Actual kWh for this hour (first/last delta within the hour)
+      const first = rs[0];
+      const last = rs[rs.length - 1];
+      const consumedKwh = Math.max(0,
+        (last.importT1Kwh + last.importT2Kwh) - (first.importT1Kwh + first.importT2Kwh)
+      );
+      const exportedKwh = Math.max(0,
+        (last.exportT1Kwh + last.exportT2Kwh) - (first.exportT1Kwh + first.exportT2Kwh)
+      );
+      return {
+        hour: h,
+        consumedKwh,
+        exportedKwh,
+        peakImportKw: maxImportW / 1000,
+        peakExportKw: maxExportW / 1000,
+      };
     }
-    return { hour: h, consumedKwh: 0, exportedKwh: 0 };
+    return { hour: h, consumedKwh: 0, exportedKwh: 0, peakImportKw: 0, peakExportKw: 0 };
   });
 }
 
@@ -160,16 +176,16 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
     // Get today's P1 daily summary (if the Hub has pushed one)
     const p1Daily = await P1DailySummary.findOne({ homeId, date: today }).lean();
 
-    // Compute peak hours from hourly buckets
+    // Compute peak hours from hourly buckets (use peak kW fields)
     let peakConsumptionHour = -1, peakExportHour = -1;
-    let peakConsumptionKwh = 0, peakExportKwh = 0;
+    let peakConsumptionKw = 0, peakExportKw = 0;
     for (const h of hourly) {
-      if (h.consumedKwh > peakConsumptionKwh) {
-        peakConsumptionKwh = h.consumedKwh;
+      if (h.peakImportKw > peakConsumptionKw) {
+        peakConsumptionKw = h.peakImportKw;
         peakConsumptionHour = h.hour;
       }
-      if (h.exportedKwh > peakExportKwh) {
-        peakExportKwh = h.exportedKwh;
+      if (h.peakExportKw > peakExportKw) {
+        peakExportKw = h.peakExportKw;
         peakExportHour = h.hour;
       }
     }
@@ -210,8 +226,8 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
       maxExportW: dailyStats.maxExportW ?? 0,
       peakConsumptionHour: p1Daily?.peakConsumptionHour ?? peakConsumptionHour,
       peakExportHour: p1Daily?.peakExportHour ?? peakExportHour,
-      peakConsumptionKwh: p1Daily?.peakConsumptionKwh ?? peakConsumptionKwh,
-      peakExportKwh: p1Daily?.peakExportKwh ?? peakExportKwh,
+      peakConsumptionKwh: p1Daily?.peakConsumptionKwh ?? peakConsumptionKw,
+      peakExportKwh: p1Daily?.peakExportKwh ?? peakExportKw,
       selfConsumptionRatio: dailyStats.selfConsumptionRatio ?? 0,
       netEnergyKwh: dailyStats.netEnergyKwh ?? 0,
       importT1Kwh: dailyStats.importT1Kwh ?? 0,
