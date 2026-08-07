@@ -1,6 +1,7 @@
 package com.homeassisthub.hub.sync
 
 import android.util.Log
+import com.homeassisthub.hub.data.HubConfig
 import com.homeassisthub.hub.data.HubConfigStore
 import com.homeassisthub.hub.data.db.InverterDailySummaryDao
 import com.homeassisthub.hub.data.db.InverterHistoryDao
@@ -147,19 +148,59 @@ class CloudSyncManager(
         val backfillCursor = configStore.getBackfillCursor()
         val backfillStart = if (backfillCursor < sevenDaysAgo) sevenDaysAgo else backfillCursor
 
-        // Priority 1: backfill from 7 days ago (catches data loss)
-        // Priority 2: new data from cursor (catches recent readings)
-        // Do backfill first, then new data in the same cycle if backfill is caught up
-        val backfillDone = backfillStart >= effectiveCursor
-        val syncStart = if (backfillDone) effectiveCursor else backfillStart
+        // Always sync new data first (priority), then backfill if budget remains
+        val p1Readings = p1RawDao.getRangeSince(effectiveCursor, BATCH_LIMIT)
+        val inverterReadings = inverterHistoryDao.getRangeSince(effectiveCursor, BATCH_LIMIT)
 
-        val p1Readings = p1RawDao.getRangeSince(syncStart, BATCH_LIMIT)
-        val inverterReadings = inverterHistoryDao.getRangeSince(syncStart, BATCH_LIMIT)
+        val hasNewData = p1Readings.isNotEmpty() || inverterReadings.isNotEmpty()
 
-        Log.d(TAG, "syncBatch: cursor=$cursor, syncStart=$syncStart, backfill=$backfillStart, done=$backfillDone, p1=${p1Readings.size}, inv=${inverterReadings.size}")
+        if (hasNewData) {
+            Log.d(TAG, "syncBatch: syncing new data, cursor=$cursor, p1=${p1Readings.size}, inv=${inverterReadings.size}")
+            val success = uploadBatch(config, p1Readings, inverterReadings)
+            if (success) {
+                val lastTs = maxOf(
+                    p1Readings.lastOrNull()?.timestamp ?: 0,
+                    inverterReadings.lastOrNull()?.timestamp ?: 0
+                )
+                val newCursor = minOf(lastTs, System.currentTimeMillis())
+                configStore.saveSyncCursor(newCursor)
+                configStore.saveLastSyncTime(System.currentTimeMillis())
+                Log.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inverter readings, cursor=$newCursor")
+                com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inv, cursor=$newCursor")
+            }
+        }
 
-        if (p1Readings.isEmpty() && inverterReadings.isEmpty()) return
+        // Backfill: re-upload older data in separate small batches
+        if (backfillStart < effectiveCursor) {
+            val backfillP1 = p1RawDao.getRangeSince(backfillStart, BACKFILL_BATCH_LIMIT)
+            val backfillInv = inverterHistoryDao.getRangeSince(backfillStart, BACKFILL_BATCH_LIMIT)
+            if (backfillP1.isNotEmpty() || backfillInv.isNotEmpty()) {
+                Log.d(TAG, "syncBatch: backfill from $backfillStart, p1=${backfillP1.size}, inv=${backfillInv.size}")
+                val success = uploadBatch(config, backfillP1, backfillInv)
+                if (success) {
+                    val lastTs = maxOf(
+                        backfillP1.lastOrNull()?.timestamp ?: 0,
+                        backfillInv.lastOrNull()?.timestamp ?: 0
+                    )
+                    configStore.saveBackfillCursor(lastTs)
+                    Log.i(TAG, "Backfilled ${backfillP1.size} P1 + ${backfillInv.size} inv, backfillCursor=$lastTs")
+                }
+            }
+        }
 
+        if (!hasNewData && backfillStart >= effectiveCursor) {
+            Log.d(TAG, "syncBatch: nothing to sync, cursor=$cursor, backfill caught up")
+        }
+
+        return
+    }
+
+    /** Uploads a batch of P1 + inverter readings to the relay. Returns true on success. */
+    private suspend fun uploadBatch(
+        config: HubConfig,
+        p1Readings: List<com.homeassisthub.hub.data.db.P1RawData>,
+        inverterReadings: List<com.homeassisthub.hub.data.db.InverterHistoryEntity>
+    ): Boolean {
         val p1JsonArray = JSONArray()
         for (r in p1Readings) {
             p1JsonArray.put(JSONObject().apply {
@@ -194,7 +235,7 @@ class CloudSyncManager(
             invJsonArray.put(JSONObject().apply {
                 put("timestamp", r.timestamp)
                 put("activePowerW", r.activePowerW)
-                put("dailyEnergyKwh", 0) // not available in history entity
+                put("dailyEnergyKwh", 0)
             })
         }
 
@@ -211,33 +252,21 @@ class CloudSyncManager(
             .addHeader("Authorization", "Bearer ${config.syncToken}")
             .build()
 
-        try {
+        return try {
             httpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    val lastTs = maxOf(
-                        p1Readings.lastOrNull()?.timestamp ?: 0,
-                        inverterReadings.lastOrNull()?.timestamp ?: 0
-                    )
-                    val newCursor = minOf(lastTs, System.currentTimeMillis())
-                    if (backfillDone) {
-                        // Normal sync: advance main cursor
-                        configStore.saveSyncCursor(newCursor)
-                    } else {
-                        // Backfill in progress: advance backfill cursor, don't touch main cursor
-                        configStore.saveBackfillCursor(newCursor)
-                    }
-                    configStore.saveLastSyncTime(System.currentTimeMillis())
-                    Log.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inverter readings, cursor=$newCursor, backfill=$backfillDone")
-                    com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inv, cursor=$newCursor")
+                    true
                 } else {
                     val respBody = response.body?.string().orEmpty()
                     Log.w(TAG, "Ingest failed: HTTP ${response.code} — $respBody")
                     com.homeassisthub.hub.controller.HubLogBuffer.w(TAG, "Ingest failed: HTTP ${response.code}")
+                    false
                 }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Ingest network error: ${e.message}")
             com.homeassisthub.hub.controller.HubLogBuffer.w(TAG, "Ingest network error: ${e.message}")
+            false
         }
     }
 
@@ -337,6 +366,7 @@ class CloudSyncManager(
         private const val TAG = "CloudSyncManager"
         private const val SYNC_INTERVAL_MS = 2 * 60 * 1000L // 2 minutes
         private const val BATCH_LIMIT = 500
+        private const val BACKFILL_BATCH_LIMIT = 100 // smaller batches for backfill
 
         private fun todayDateString(): String {
             val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
