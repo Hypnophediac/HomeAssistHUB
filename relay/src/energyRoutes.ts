@@ -98,6 +98,8 @@ function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalE
 
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
+// Returns average power (kW) per hour, not kWh. This makes the chart
+// visually comparable to the real-time dashboard (which shows W).
 function computeHourlyBuckets(readings: any[]): any[] {
   const buckets: Record<number, { first: any; last: any }> = {};
   for (const r of readings) {
@@ -111,13 +113,18 @@ function computeHourlyBuckets(readings: any[]): any[] {
   return Array.from({ length: 24 }, (_, h) => {
     const b = buckets[h];
     if (b && b.first && b.last && b.first !== b.last) {
-      const consumed = Math.max(0,
+      const consumedKwh = Math.max(0,
         (b.last.importT1Kwh + b.last.importT2Kwh) - (b.first.importT1Kwh + b.first.importT2Kwh)
       );
-      const exported = Math.max(0,
+      const exportedKwh = Math.max(0,
         (b.last.exportT1Kwh + b.last.exportT2Kwh) - (b.first.exportT1Kwh + b.first.exportT2Kwh)
       );
-      return { hour: h, consumedKwh: consumed, exportedKwh: exported };
+      // Convert kWh to average kW: divide by actual time span in hours
+      const durationMs = (b.last.timestamp - b.first.timestamp);
+      const durationH = durationMs > 0 ? durationMs / 3_600_000 : 1.0;
+      const consumedKw = consumedKwh / durationH;
+      const exportedKw = exportedKwh / durationH;
+      return { hour: h, consumedKwh: consumedKw, exportedKwh: exportedKw };
     }
     return { hour: h, consumedKwh: 0, exportedKwh: 0 };
   });
@@ -150,8 +157,8 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
       .lean();
 
     const hourly = computeHourlyBuckets(rawReadings);
-    const totalConsumed = hourly.reduce((s, h) => s + h.consumedKwh, 0);
-    const totalExported = hourly.reduce((s, h) => s + h.exportedKwh, 0);
+    // hourly now returns average kW (not kWh), so compute real kWh totals separately
+    const { consumed: totalConsumed, exported: totalExported } = computeDailyConsumedExported(rawReadings);
     const latest = rawReadings[rawReadings.length - 1];
 
     // Get today's inverter daily summary (live or finalized)

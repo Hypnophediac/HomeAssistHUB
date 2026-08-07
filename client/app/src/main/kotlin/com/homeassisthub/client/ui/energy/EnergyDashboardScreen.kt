@@ -149,15 +149,10 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
                 dailyData?.let { data ->
                     item { SummaryCards(data = data) }
                     item {
-                        // Only show hours up to now — later hours haven't happened
-                        // yet today and would always be zero, forcing a pointless
-                        // horizontal scroll to see the actual (early) data.
-                        val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-                        val visibleHourly = data.hourly.filter { it.hour <= currentHour }
                         EnergyColumnChart(
-                            labels = visibleHourly.map { "%02d:00".format(it.hour) },
-                            consumedValues = visibleHourly.map { it.consumedKwh },
-                            exportedValues = visibleHourly.map { it.exportedKwh }
+                            labels = data.hourly.map { "%02d:00".format(it.hour) },
+                            consumedValues = data.hourly.map { it.consumedKwh },
+                            exportedValues = data.hourly.map { it.exportedKwh }
                         )
                     }
                 } ?: item { LoadingPlaceholder() }
@@ -710,12 +705,12 @@ private fun SummaryCards(data: EnergyDailyResponseDto) {
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Csúcs vételezés",
-            value = if (data.peakConsumptionHour >= 0) "${data.peakConsumptionHour}:00 (${formatKwh(data.peakConsumptionKwh)})" else "N/A"
+            value = if (data.peakConsumptionHour >= 0) "${data.peakConsumptionHour}:00 (${"%.2f".format(data.peakConsumptionKwh)} kW)" else "N/A"
         )
         LiveStatCard(
             modifier = Modifier.weight(1f),
             title = "Csúcs visszatáplálás",
-            value = if (data.peakExportHour >= 0) "${data.peakExportHour}:00 (${formatKwh(data.peakExportKwh)})" else "N/A"
+            value = if (data.peakExportHour >= 0) "${data.peakExportHour}:00 (${"%.2f".format(data.peakExportKwh)} kW)" else "N/A"
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -1021,8 +1016,8 @@ private fun ZoomableEnergyColumnChart(
     height: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier
 ) {
-    var scale by remember(labels) { mutableStateOf(1f) }
-    var offsetX by remember(labels) { mutableStateOf(0f) }
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
 
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
@@ -1037,11 +1032,8 @@ private fun ZoomableEnergyColumnChart(
         consumedValues.maxOrNull()?.toFloat() ?: 0f,
         exportedValues.maxOrNull()?.toFloat() ?: 0f
     )
-    // Fixed Y-axis scale: round up to nearest 0.5 kWh, minimum 1.0
-    val niceMax = maxOf(
-        kotlin.math.ceil(maxDataValue * 1.15f * 2f) / 2f,
-        1.0f
-    )
+    // Fixed Y-axis scale: always 0-5 kWh
+    val niceMax = 5.0f
 
     androidx.compose.foundation.Canvas(
         modifier = modifier
@@ -1049,17 +1041,13 @@ private fun ZoomableEnergyColumnChart(
             .height(height)
             .padding(top = 8.dp)
             .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(MIN_CHART_SCALE, MAX_CHART_SCALE)
-                    scale = newScale
-                    offsetX += pan.x
-                }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(onDoubleTap = {
-                    scale = MIN_CHART_SCALE
-                    offsetX = 0f
-                })
+                detectTransformGestures(
+                    onGesture = { _, pan, zoom, _ ->
+                        val newScale = (scale * zoom).coerceIn(MIN_CHART_SCALE, MAX_CHART_SCALE)
+                        scale = newScale
+                        offsetX += pan.x
+                    }
+                )
             }
     ) {
         val canvasW = size.width
