@@ -205,6 +205,7 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
 
     res.json({
       hourly,
+      hourCounts,
       totalConsumedKwh: totalConsumed,
       totalExportedKwh: totalExported,
       totalProducedKwh: producedKwh,
