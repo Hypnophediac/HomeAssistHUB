@@ -33,7 +33,7 @@ Android foreground service, ami folyamatosan fut az otthoni telefonon.
 - **`HuaweiCloudScraper`** — ~5 percenként scrape-eli a Huawei FusionSolar Kiosk API-t (napelem termelés, napi yield kWh). A P1 adatot T-5 perccel korábbi olvasattal szinkronizálja a ház fogyasztás pontos számításához.
 - **`P1HistoryBuffer`** — in-memory ring buffer (10 perc), ami a P1 olvasatokat tárolja a T-5 perces szinkronizációhoz. Éjféli kWh baseline-t is követ a napi delta számításhoz.
 - **`InverterLiveData`** — singleton, ami a legfrissebb inverter adatokat tartja (activePowerW, realConsumptionW, dailyEnergyKwh).
-- **`CloudSyncManager`** — 2 percenként batch-eli a Room DB-ből a P1 raw + inverter olvasatokat és POST-olja a Render backendnek. Sync kurzort használ (csak sikeres válasz esetén léptet előre). Offline eset a Room DB szolgál pufferként.
+- **`CloudSyncManager`** — 2 percenként batch-eli a Room DB-ből a P1 raw + inverter olvasatokat és POST-olja a Render backendnek. **Két kurzor**: fő cursor (új adatok) és backfill cursor (7 nap gördülő ablak újra-szinkronizálása). A relay `bulkWrite` upsert-tel dolgozik (`{homeId, timestamp}` unique index), így a re-szinkron idempotens — MongoDB/Render adatvesztés esetén automatikusan újra feltöltődik. Offline eset a Room DB szolgál pufferként.
 - **`CommandRouter`** — Socket.IO parancskezelő (get_p1_history, get_energy_daily/weekly/monthly/yearly, get_live_snapshot, stb.).
 - **`HubApiServer`** — Ktor HTTP szerver (LAN-on), REST API a helyi hálózaton.
 - **`HubLogBuffer`** — in-memory ring buffer (200 bejegyzés), ami a szolgáltatás komponenseinek logjait gyűjti a dashboard log viewer számára.
@@ -245,7 +245,7 @@ Node.js/TypeScript backend, Render-on fut. Részletes dokumentáció: [`relay/RE
   - InverterReading — 14 nap gördülő ablak
   - P1DailySummary / InverterDailySummary — határozatlan ideig
   - HomeToken — sync token registry
-- **REST API** — ingest (Hub→Render) + retrieval (Client→Render), Bearer token auth
+- **REST API** — ingest (Hub→Render, `bulkWrite` upsert `{homeId, timestamp}` unique index) + retrieval (Client→Render), Bearer token auth
 
 ## Eszközök
 
@@ -276,6 +276,7 @@ cd relay && npm install && npm run build
 
 - **Fázis 0-8** — Kliens UI redesign: sötét téma, élő flow kártyák, pinch-to-zoom grafikon, Open-Meteo időjárás előrejelzés, egyedi dátumtartomány, InverterDailySummary tábla, statisztikai kártyák
 - **Fázis 9-13** — Felhő híd: MongoDB integráció, CloudSyncManager, sync token auth, Render-only EnergyViewModel
+- **Robust sync** — relay `bulkWrite` upsert + unique index, Hub 7-day backfill cursor (separate from main cursor), prevents permanent data loss on MongoDB/Render cold start. Energy daily chart shows peak kW per hour (max instantaneous power) instead of kWh — boiler spikes visible at correct scale.
 - **Hub dashboard** — Scrollozható backend dashboard sötét témával: live P1/inverter/cloud sync státusz, log viewer, HubLogBuffer
 - **Bugfixek** — selfConsumptionRatio formula javítás, T-5 szinkronizáció fallback, yearly endpoint Budapest-aware dátumkezelés, service státusz pontos megjelenítése
 
