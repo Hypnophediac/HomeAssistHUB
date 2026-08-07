@@ -23,45 +23,57 @@ router.post("/:homeId/ingest", syncTokenAuth, async (req: Request & { homeId?: s
     let invInserted = 0;
 
     if (Array.isArray(p1Readings) && p1Readings.length > 0) {
-      const docs = p1Readings.map((r: any) => ({
-        homeId,
-        timestamp: r.timestamp,
-        powerImportW: r.powerImportW ?? 0,
-        powerExportW: r.powerExportW ?? 0,
-        importT1Kwh: r.importT1Kwh ?? 0,
-        importT2Kwh: r.importT2Kwh ?? 0,
-        exportT1Kwh: r.exportT1Kwh ?? 0,
-        exportT2Kwh: r.exportT2Kwh ?? 0,
-        currentPowerW: r.currentPowerW ?? 0,
-        l1V: r.l1V ?? 0,
-        l2V: r.l2V ?? 0,
-        l3V: r.l3V ?? 0,
-        l1A: r.l1A ?? 0,
-        l2A: r.l2A ?? 0,
-        l3A: r.l3A ?? 0,
-        powerImportL1W: r.powerImportL1W ?? 0,
-        powerImportL2W: r.powerImportL2W ?? 0,
-        powerImportL3W: r.powerImportL3W ?? 0,
-        powerExportL1W: r.powerExportL1W ?? 0,
-        powerExportL2W: r.powerExportL2W ?? 0,
-        powerExportL3W: r.powerExportL3W ?? 0,
-        powerFactor: r.powerFactor ?? 0,
-        frequencyHz: r.frequencyHz ?? 50,
-        currentTariff: r.currentTariff ?? 1,
+      const ops = p1Readings.map((r: any) => ({
+        updateOne: {
+          filter: { homeId, timestamp: r.timestamp },
+          update: { $set: {
+            homeId,
+            timestamp: r.timestamp,
+            powerImportW: r.powerImportW ?? 0,
+            powerExportW: r.powerExportW ?? 0,
+            importT1Kwh: r.importT1Kwh ?? 0,
+            importT2Kwh: r.importT2Kwh ?? 0,
+            exportT1Kwh: r.exportT1Kwh ?? 0,
+            exportT2Kwh: r.exportT2Kwh ?? 0,
+            currentPowerW: r.currentPowerW ?? 0,
+            l1V: r.l1V ?? 0,
+            l2V: r.l2V ?? 0,
+            l3V: r.l3V ?? 0,
+            l1A: r.l1A ?? 0,
+            l2A: r.l2A ?? 0,
+            l3A: r.l3A ?? 0,
+            powerImportL1W: r.powerImportL1W ?? 0,
+            powerImportL2W: r.powerImportL2W ?? 0,
+            powerImportL3W: r.powerImportL3W ?? 0,
+            powerExportL1W: r.powerExportL1W ?? 0,
+            powerExportL2W: r.powerExportL2W ?? 0,
+            powerExportL3W: r.powerExportL3W ?? 0,
+            powerFactor: r.powerFactor ?? 0,
+            frequencyHz: r.frequencyHz ?? 50,
+            currentTariff: r.currentTariff ?? 1,
+          }},
+          upsert: true,
+        }
       }));
-      const result = await P1RawReading.insertMany(docs, { ordered: false });
-      p1Inserted = result.length;
+      const result = await P1RawReading.bulkWrite(ops, { ordered: false });
+      p1Inserted = result.upsertedCount + result.modifiedCount;
     }
 
     if (Array.isArray(inverterReadings) && inverterReadings.length > 0) {
-      const docs = inverterReadings.map((r: any) => ({
-        homeId,
-        timestamp: r.timestamp,
-        activePowerW: r.activePowerW ?? 0,
-        dailyEnergyKwh: r.dailyEnergyKwh ?? 0,
+      const ops = inverterReadings.map((r: any) => ({
+        updateOne: {
+          filter: { homeId, timestamp: r.timestamp },
+          update: { $set: {
+            homeId,
+            timestamp: r.timestamp,
+            activePowerW: r.activePowerW ?? 0,
+            dailyEnergyKwh: r.dailyEnergyKwh ?? 0,
+          }},
+          upsert: true,
+        }
       }));
-      const result = await InverterReading.insertMany(docs, { ordered: false });
-      invInserted = result.length;
+      const result = await InverterReading.bulkWrite(ops, { ordered: false });
+      invInserted = result.upsertedCount + result.modifiedCount;
     }
 
     res.json({ p1Inserted, invInserted });

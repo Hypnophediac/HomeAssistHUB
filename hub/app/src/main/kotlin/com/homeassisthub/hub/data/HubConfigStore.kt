@@ -73,6 +73,17 @@ class HubConfigStore(context: Context) {
         prefs.edit().putLong(KEY_SYNC_CURSOR, timestamp).apply()
     }
 
+    /** Backfill cursor: separate from the main sync cursor, used to
+     *  re-upload the 7-day rolling window in batches. The main cursor
+     *  advances for new data while backfill catches up independently. */
+    fun getBackfillCursor(): Long {
+        return prefs.getLong(KEY_BACKFILL_CURSOR, 0L)
+    }
+
+    fun saveBackfillCursor(timestamp: Long) {
+        prefs.edit().putLong(KEY_BACKFILL_CURSOR, timestamp).apply()
+    }
+
     /** Timestamp of the last successful cloud sync (for UI diagnostics). */
     fun getLastSyncTime(): Long {
         return prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
@@ -109,6 +120,7 @@ class HubConfigStore(context: Context) {
         private const val KEY_LAST_INVERTER_KWH = "last_inverter_kwh"
         private const val KEY_SYNC_TOKEN = "sync_token"
         private const val KEY_SYNC_CURSOR = "sync_cursor"
+        private const val KEY_BACKFILL_CURSOR = "backfill_cursor"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
         private const val KEY_BASELINE_IMPORT = "baseline_import_kwh"
         private const val KEY_BASELINE_EXPORT = "baseline_export_kwh"

@@ -59,7 +59,7 @@ const p1RawReadingSchema = new mongoose.Schema({
   currentTariff: { type: Number, default: 1 },
 }, { _id: true, timestamps: false });
 
-p1RawReadingSchema.index({ homeId: 1, timestamp: 1 });
+p1RawReadingSchema.index({ homeId: 1, timestamp: 1 }, { unique: true });
 
 const inverterReadingSchema = new mongoose.Schema({
   homeId: { type: String, required: true, index: true },
@@ -68,7 +68,7 @@ const inverterReadingSchema = new mongoose.Schema({
   dailyEnergyKwh: { type: Number, default: 0 },
 }, { _id: true, timestamps: false });
 
-inverterReadingSchema.index({ homeId: 1, timestamp: 1 });
+inverterReadingSchema.index({ homeId: 1, timestamp: 1 }, { unique: true });
 
 const p1DailySummarySchema = new mongoose.Schema({
   homeId: { type: String, required: true, index: true },

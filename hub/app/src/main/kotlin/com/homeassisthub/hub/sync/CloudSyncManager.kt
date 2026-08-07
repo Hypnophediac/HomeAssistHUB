@@ -136,11 +136,27 @@ class CloudSyncManager(
             configStore.saveSyncCursor(0L)
             0L
         } else cursor
-        val p1Readings = p1RawDao.getRangeSince(effectiveCursor, BATCH_LIMIT)
-        val invCursor = effectiveCursor // same cursor for inverter history
-        val inverterReadings = inverterHistoryDao.getRangeSince(invCursor, BATCH_LIMIT)
 
-        Log.d(TAG, "syncBatch: cursor=$cursor, p1=${p1Readings.size}, inv=${inverterReadings.size}")
+        // Robust sync: always re-sync from 7 days ago. The relay upserts on
+        // {homeId, timestamp}, so re-syncing is idempotent. This ensures that
+        // if the relay/MongoDB loses data (Render cold start, etc.), the full
+        // 7-day window is automatically re-uploaded.
+        // Use a separate backfill cursor so the main cursor can advance normally
+        // for new data while backfill progresses independently.
+        val sevenDaysAgo = System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L
+        val backfillCursor = configStore.getBackfillCursor()
+        val backfillStart = if (backfillCursor < sevenDaysAgo) sevenDaysAgo else backfillCursor
+
+        // Priority 1: backfill from 7 days ago (catches data loss)
+        // Priority 2: new data from cursor (catches recent readings)
+        // Do backfill first, then new data in the same cycle if backfill is caught up
+        val backfillDone = backfillStart >= effectiveCursor
+        val syncStart = if (backfillDone) effectiveCursor else backfillStart
+
+        val p1Readings = p1RawDao.getRangeSince(syncStart, BATCH_LIMIT)
+        val inverterReadings = inverterHistoryDao.getRangeSince(syncStart, BATCH_LIMIT)
+
+        Log.d(TAG, "syncBatch: cursor=$cursor, syncStart=$syncStart, backfill=$backfillStart, done=$backfillDone, p1=${p1Readings.size}, inv=${inverterReadings.size}")
 
         if (p1Readings.isEmpty() && inverterReadings.isEmpty()) return
 
@@ -198,16 +214,20 @@ class CloudSyncManager(
         try {
             httpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    val newCursor = minOf(
-                        maxOf(
-                            p1Readings.lastOrNull()?.timestamp ?: cursor,
-                            inverterReadings.lastOrNull()?.timestamp ?: cursor
-                        ),
-                        System.currentTimeMillis() // never advance cursor into the future
+                    val lastTs = maxOf(
+                        p1Readings.lastOrNull()?.timestamp ?: 0,
+                        inverterReadings.lastOrNull()?.timestamp ?: 0
                     )
-                    configStore.saveSyncCursor(newCursor)
+                    val newCursor = minOf(lastTs, System.currentTimeMillis())
+                    if (backfillDone) {
+                        // Normal sync: advance main cursor
+                        configStore.saveSyncCursor(newCursor)
+                    } else {
+                        // Backfill in progress: advance backfill cursor, don't touch main cursor
+                        configStore.saveBackfillCursor(newCursor)
+                    }
                     configStore.saveLastSyncTime(System.currentTimeMillis())
-                    Log.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inverter readings, cursor=$newCursor")
+                    Log.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inverter readings, cursor=$newCursor, backfill=$backfillDone")
                     com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Synced ${p1Readings.size} P1 + ${inverterReadings.size} inv, cursor=$newCursor")
                 } else {
                     val respBody = response.body?.string().orEmpty()
