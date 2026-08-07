@@ -64,7 +64,9 @@ data class P1ReadingDto(
 data class EnergyHourlyDto(
     val hour: Int,
     val consumedKwh: Double,
-    val exportedKwh: Double
+    val exportedKwh: Double,
+    val peakImportKw: Double = 0.0,
+    val peakExportKw: Double = 0.0
 )
 
 @JsonClass(generateAdapter = true)

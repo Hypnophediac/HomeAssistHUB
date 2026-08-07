@@ -163,6 +163,14 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
       .sort({ timestamp: 1 })
       .lean();
 
+    // DEBUG: count readings per Budapest hour
+    const hourCounts: Record<number, number> = {};
+    for (const r of rawReadings) {
+      const h = budapestHour(r.timestamp);
+      hourCounts[h] = (hourCounts[h] || 0) + 1;
+    }
+    console.log(`[daily] ${today} rawReadings=${rawReadings.length}, hourCounts=`, hourCounts);
+
     const hourly = computeHourlyBuckets(rawReadings);
     // hourly now returns average kW (not kWh), so compute real kWh totals separately
     const { consumed: totalConsumed, exported: totalExported } = computeDailyConsumedExported(rawReadings);

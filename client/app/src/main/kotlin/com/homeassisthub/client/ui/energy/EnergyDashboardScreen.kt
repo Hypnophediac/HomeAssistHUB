@@ -151,8 +151,8 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
                     item {
                         EnergyColumnChart(
                             labels = data.hourly.map { "%02d:00".format(it.hour) },
-                            consumedValues = data.hourly.map { it.consumedKwh },
-                            exportedValues = data.hourly.map { it.exportedKwh }
+                            consumedValues = data.hourly.map { it.peakImportKw },
+                            exportedValues = data.hourly.map { it.peakExportKw }
                         )
                     }
                 } ?: item { LoadingPlaceholder() }
