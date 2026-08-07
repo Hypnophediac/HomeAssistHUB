@@ -98,33 +98,24 @@ function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalE
 
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
-// Returns average power (kW) per hour, not kWh. This makes the chart
-// visually comparable to the real-time dashboard (which shows W).
+// Returns peak power (kW) per hour — the maximum instantaneous power recorded
+// during that hour. This makes short spikes (e.g. boiler) visible on the chart.
 function computeHourlyBuckets(readings: any[]): any[] {
-  const buckets: Record<number, { first: any; last: any }> = {};
+  const buckets: Record<number, any[]> = {};
   for (const r of readings) {
     const hour = budapestHour(r.timestamp);
-    if (!buckets[hour]) {
-      buckets[hour] = { first: r, last: r };
-    } else {
-      buckets[hour].last = r;
-    }
+    if (!buckets[hour]) buckets[hour] = [];
+    buckets[hour].push(r);
   }
   return Array.from({ length: 24 }, (_, h) => {
-    const b = buckets[h];
-    if (b && b.first && b.last && b.first !== b.last) {
-      const consumedKwh = Math.max(0,
-        (b.last.importT1Kwh + b.last.importT2Kwh) - (b.first.importT1Kwh + b.first.importT2Kwh)
-      );
-      const exportedKwh = Math.max(0,
-        (b.last.exportT1Kwh + b.last.exportT2Kwh) - (b.first.exportT1Kwh + b.first.exportT2Kwh)
-      );
-      // Convert kWh to average kW: divide by actual time span in hours
-      const durationMs = (b.last.timestamp - b.first.timestamp);
-      const durationH = durationMs > 0 ? durationMs / 3_600_000 : 1.0;
-      const consumedKw = consumedKwh / durationH;
-      const exportedKw = exportedKwh / durationH;
-      return { hour: h, consumedKwh: consumedKw, exportedKwh: exportedKw };
+    const rs = buckets[h];
+    if (rs && rs.length > 0) {
+      let maxImportW = 0, maxExportW = 0;
+      for (const r of rs) {
+        maxImportW = Math.max(maxImportW, r.powerImportW || 0);
+        maxExportW = Math.max(maxExportW, r.powerExportW || 0);
+      }
+      return { hour: h, consumedKwh: maxImportW / 1000, exportedKwh: maxExportW / 1000 };
     }
     return { hour: h, consumedKwh: 0, exportedKwh: 0 };
   });
