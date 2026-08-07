@@ -45,10 +45,12 @@ function dateRangeMillis(dateStr: string): [number, number] {
 }
 
 function budapestHour(ts: number): number {
-  return parseInt(new Intl.DateTimeFormat("en-US", {
+  const hour = parseInt(new Intl.DateTimeFormat("en-US", {
     timeZone: BUDAPEST_TZ,
     hour: "2-digit", hour12: false,
   }).format(new Date(ts)));
+  // Intl.DateTimeFormat can return 24 for midnight in some timezones — normalize to 0
+  return hour === 24 ? 0 : hour;
 }
 
 function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalExported: number, totalProduced: number) {
