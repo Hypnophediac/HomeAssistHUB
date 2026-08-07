@@ -102,29 +102,13 @@ class HuaweiCloudScraper(
         // Real-time power (kW → W)
         val realKpi = data.optJSONObject("realKpi")
         val realTimePowerKw = realKpi?.optDouble("realTimePower", 0.0) ?: 0.0
-
-        // Also check powerCurve.currentPower — sometimes more up-to-date than realKpi.realTimePower
-        val powerCurve = data.optJSONObject("powerCurve")
-        val curveCurrentPowerKw = powerCurve?.optString("currentPower", "")?.toDoubleOrNull() ?: 0.0
-
-        // Use the lower of the two values as the real-time power.
-        // The Kiosk realTimePower can be stale (stuck at an old value),
-        // while powerCurve.currentPower may be more recent — or vice versa.
-        // Taking the lower value is a conservative choice that avoids
-        // showing inflated production when the API is lagging.
-        val activePowerW = if (curveCurrentPowerKw > 0.0 && realTimePowerKw > 0.0) {
-            minOf(realTimePowerKw, curveCurrentPowerKw) * 1000.0
-        } else if (curveCurrentPowerKw > 0.0) {
-            curveCurrentPowerKw * 1000.0
-        } else {
-            realTimePowerKw * 1000.0
-        }
+        val activePowerW = (realTimePowerKw * 1000.0)
 
         // Daily yield (kWh) from Kiosk API — hardware counter, precise
         val dailyEnergyKwh = realKpi?.optDouble("dailyEnergy", 0.0) ?: 0.0
 
         InverterLiveData.update(activePowerW)
-        Log.i(TAG, "Kiosk scrape OK: ${activePowerW}W (realTimePower=${realTimePowerKw}kW, curveCurrent=${curveCurrentPowerKw}kW), daily=${dailyEnergyKwh}kWh")
+        Log.i(TAG, "Kiosk scrape OK: ${activePowerW}W (realTimePower=${realTimePowerKw}kW), daily=${dailyEnergyKwh}kWh")
         com.homeassisthub.hub.controller.HubLogBuffer.i(TAG, "Kiosk OK: ${activePowerW.toInt()}W, daily=${"%.2f".format(dailyEnergyKwh)}kWh")
 
         // Compute synchronized house consumption using T-5min P1 data.
@@ -172,6 +156,7 @@ class HuaweiCloudScraper(
         }
 
         // Also store today's power curve as history points
+        val powerCurve = data.optJSONObject("powerCurve")
         if (powerCurve != null) {
             storePowerCurveAsHistory(powerCurve)
         }
