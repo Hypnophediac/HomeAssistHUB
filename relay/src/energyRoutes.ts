@@ -101,28 +101,29 @@ function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalE
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
 // Returns per-hour produced kWh from InverterReading records.
-// Uses dailyEnergyKwh delta (max - min) within each hour.
+// Uses activePowerW (watts) averaged within each hour, then converts to kWh:
+//   kWh = avgPowerW * (readingCount / expectedReadingsPerHour) / 1000
+// where expectedReadingsPerHour = 12 (every 5 min). This approximates the
+// energy produced during each hour based on instantaneous power samples.
 function computeHourlyInverterProduction(invReadings: any[]): Record<number, number> {
-  const buckets: Record<number, any[]> = {};
+  const buckets: Record<number, number[]> = {};
   for (const r of invReadings) {
     const hour = budapestHour(r.timestamp);
     if (!buckets[hour]) buckets[hour] = [];
-    buckets[hour].push(r);
+    buckets[hour].push(r.activePowerW || 0);
   }
   const result: Record<number, number> = {};
   for (let h = 0; h < 24; h++) {
-    const rs = buckets[h];
-    if (!rs || rs.length < 2) {
+    const powers = buckets[h];
+    if (!powers || powers.length === 0) {
       result[h] = 0;
       continue;
     }
-    let minKwh = Infinity, maxKwh = -Infinity;
-    for (const r of rs) {
-      const kwh = r.dailyEnergyKwh || 0;
-      if (kwh < minKwh) minKwh = kwh;
-      if (kwh > maxKwh) maxKwh = kwh;
-    }
-    result[h] = Math.max(0, maxKwh - minKwh);
+    // Average power (W) × duration (h) / 1000 = kWh
+    // Duration approximated by reading count × 5min / 60min
+    const avgPower = powers.reduce((s: number, p: number) => s + p, 0) / powers.length;
+    const durationHours = (powers.length * 5) / 60;
+    result[h] = Math.max(0, (avgPower * durationHours) / 1000);
   }
   return result;
 }
