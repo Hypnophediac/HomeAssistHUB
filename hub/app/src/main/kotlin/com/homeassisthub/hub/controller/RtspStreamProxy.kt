@@ -289,6 +289,7 @@ class RtspStreamProxy(
             val baos = ByteArrayOutputStream()
             scaled.compress(Bitmap.CompressFormat.JPEG, jpegQuality, baos)
             val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+            Log.d(TAG, "sendFrame: ${scaled.width}x${scaled.height} base64=${base64.length}")
             onFrame(base64)
         } catch (e: Exception) {
             Log.e(TAG, "sendFrame error: ${e.message}")
@@ -309,6 +310,9 @@ class RtspStreamProxy(
                 if (annexB.size <= it.capacity()) {
                     it.put(annexB)
                     codec.queueInputBuffer(inputIndex, 0, annexB.size, System.currentTimeMillis() * 1000, 0)
+                    if (outputFrameCount < 3 || outputFrameCount % 30 == 0) {
+                        Log.d(TAG, "Fed NAL type=$nalType size=${annexB.size}")
+                    }
                 } else {
                     codec.queueInputBuffer(inputIndex, 0, 0, 0, 0)
                 }
@@ -319,41 +323,47 @@ class RtspStreamProxy(
 
     private fun tryDecodeOutput(codec: MediaCodec, startTime: Long): Bitmap? {
         val info = MediaCodec.BufferInfo()
-        val outputIndex = codec.dequeueOutputBuffer(info, 0)
-        if (outputIndex >= 0) {
-            if (info.size > 0) {
-                outputFrameCount++
-                if ((info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
-                    codec.releaseOutputBuffer(outputIndex, false)
-                    return null
+        // Drain all available output buffers
+        while (running.get()) {
+            val outputIndex = codec.dequeueOutputBuffer(info, 0)
+            if (outputIndex < 0) {
+                if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    outputFormat = codec.outputFormat
+                    Log.i(TAG, "Output format changed: $outputFormat")
                 }
-                codec.releaseOutputBuffer(outputIndex, true)
-
-                if (outputFrameCount < 6) {
-                    val reader = imageReader
-                    if (reader != null) {
-                        while (true) {
-                            val img = reader.acquireNextImage() ?: break
-                            img.close()
-                        }
-                    }
-                    return null
-                }
-
-                Thread.sleep(10)
-                val reader = imageReader ?: return null
-                val image = reader.acquireNextImage()
-                if (image != null) {
-                    val bitmap = yuvImageToBitmap(image)
-                    image.close()
-                    return bitmap
-                }
-            } else {
-                codec.releaseOutputBuffer(outputIndex, false)
+                break
             }
-        } else if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-            outputFormat = codec.outputFormat
-            Log.i(TAG, "Output format changed: $outputFormat")
+            if (info.size <= 0) {
+                codec.releaseOutputBuffer(outputIndex, false)
+                continue
+            }
+            outputFrameCount++
+            if ((info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+                codec.releaseOutputBuffer(outputIndex, false)
+                continue
+            }
+            codec.releaseOutputBuffer(outputIndex, true)
+
+            if (outputFrameCount < 6) {
+                val reader = imageReader
+                if (reader != null) {
+                    while (true) {
+                        val img = reader.acquireNextImage() ?: break
+                        img.close()
+                    }
+                }
+                continue
+            }
+
+            Thread.sleep(10)
+            val reader = imageReader ?: continue
+            val image = reader.acquireNextImage()
+            if (image != null) {
+                Log.d(TAG, "ImageReader: w=${image.width} h=${image.height} frame#$outputFrameCount")
+                val bitmap = yuvImageToBitmap(image)
+                image.close()
+                return bitmap
+            }
         }
         return null
     }

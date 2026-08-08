@@ -102,6 +102,7 @@ class HubSocketClient(
                 .put("deviceId", deviceId)
                 .put("frame", base64Jpeg)
                 .put("timestamp", System.currentTimeMillis())
+            Log.d(TAG, "Emitting camera_frame: deviceId=$deviceId size=${base64Jpeg.length}")
             sock.emit("camera_frame", framePayload)
         }
 

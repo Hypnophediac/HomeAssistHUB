@@ -38,6 +38,7 @@ const io = new Server(httpServer, {
     origin: "*",
     methods: ["GET", "POST"],
   },
+  maxHttpBufferSize: 5_000_000, // 5MB for camera frame payloads
 });
 
 io.on("connection", (socket) => {
