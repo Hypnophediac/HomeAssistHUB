@@ -235,7 +235,7 @@ class CloudSyncManager(
             invJsonArray.put(JSONObject().apply {
                 put("timestamp", r.timestamp)
                 put("activePowerW", r.activePowerW)
-                put("dailyEnergyKwh", 0)
+                put("dailyEnergyKwh", r.dailyEnergyKwh)
             })
         }
 

@@ -143,14 +143,15 @@ class HuaweiCloudScraper(
         // P1 readings because inverter_history has no recent entries.
         if (activePowerW > 0.0) {
             scope.launch {
-                runCatching {
+                    runCatching {
                     InverterHistoryDaoHolder.dao?.insert(
                         com.homeassisthub.hub.data.db.InverterHistoryEntity(
                             timestamp = System.currentTimeMillis(),
-                            activePowerW = activePowerW
+                            activePowerW = activePowerW,
+                            dailyEnergyKwh = dailyEnergyKwh
                         )
                     )
-                    Log.i(TAG, "Stored realtime inverter point: ${activePowerW.toInt()}W")
+                    Log.i(TAG, "Stored realtime inverter point: ${activePowerW.toInt()}W, daily=${"%.3f".format(dailyEnergyKwh)}kWh")
                 }.onFailure { Log.w(TAG, "Failed to store realtime point: ${it.message}") }
             }
         }
@@ -169,11 +170,17 @@ class HuaweiCloudScraper(
 
         val today = Calendar.getInstance()
         val points = mutableListOf<com.homeassisthub.hub.data.db.InverterHistoryEntity>()
+        var cumulativeKwh = 0.0
         for (i in 0 until xAxis.length()) {
             val timeStr = xAxis.getString(i)
             val powerStr = activePower.getString(i)
-            if (powerStr == "-" || powerStr.isBlank()) continue
+            if (powerStr == "-" || powerStr.isBlank()) {
+                // Still advance cumulative energy (0 production for this interval)
+                continue
+            }
             val powerKw = powerStr.toDoubleOrNull() ?: continue
+            // Each interval is 5 minutes = 1/12 hour
+            cumulativeKwh += powerKw * (5.0 / 60.0)
             val (h, m) = timeStr.split(":").let { parts ->
                 (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
             }
@@ -187,7 +194,8 @@ class HuaweiCloudScraper(
             points.add(
                 com.homeassisthub.hub.data.db.InverterHistoryEntity(
                     timestamp = today.timeInMillis,
-                    activePowerW = powerKw * 1000.0
+                    activePowerW = powerKw * 1000.0,
+                    dailyEnergyKwh = cumulativeKwh
                 )
             )
         }

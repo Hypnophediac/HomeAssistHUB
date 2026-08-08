@@ -15,5 +15,6 @@ data class InverterHistoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val timestamp: Long,
-    val activePowerW: Double
+    val activePowerW: Double,
+    val dailyEnergyKwh: Double = 0.0
 )

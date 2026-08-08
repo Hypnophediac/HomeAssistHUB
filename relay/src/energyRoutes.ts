@@ -101,28 +101,39 @@ function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalE
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
 // Returns per-hour produced kWh from InverterReading records.
-// Uses activePowerW (watts) averaged within each hour, then converts to kWh:
-//   kWh = avgPowerW * (readingCount / expectedReadingsPerHour) / 1000
-// where expectedReadingsPerHour = 12 (every 5 min). This approximates the
-// energy produced during each hour based on instantaneous power samples.
+// Primary method: dailyEnergyKwh delta (max - min) within each hour — precise hardware counter.
+// Fallback: activePowerW (watts) averaged × duration, when dailyEnergyKwh is unavailable (0).
 function computeHourlyInverterProduction(invReadings: any[]): Record<number, number> {
-  const buckets: Record<number, number[]> = {};
+  const buckets: Record<number, any[]> = {};
   for (const r of invReadings) {
     const hour = budapestHour(r.timestamp);
     if (!buckets[hour]) buckets[hour] = [];
-    buckets[hour].push(r.activePowerW || 0);
+    buckets[hour].push(r);
   }
   const result: Record<number, number> = {};
   for (let h = 0; h < 24; h++) {
-    const powers = buckets[h];
-    if (!powers || powers.length === 0) {
+    const rs = buckets[h];
+    if (!rs || rs.length === 0) {
       result[h] = 0;
       continue;
     }
-    // Average power (W) × duration (h) / 1000 = kWh
-    // Duration approximated by reading count × 5min / 60min
-    const avgPower = powers.reduce((s: number, p: number) => s + p, 0) / powers.length;
-    const durationHours = (powers.length * 5) / 60;
+
+    // Try dailyEnergyKwh delta first (precise hardware counter)
+    const withEnergy = rs.filter(r => (r.dailyEnergyKwh || 0) > 0);
+    if (withEnergy.length >= 2) {
+      let minKwh = Infinity, maxKwh = -Infinity;
+      for (const r of withEnergy) {
+        const kwh = r.dailyEnergyKwh;
+        if (kwh < minKwh) minKwh = kwh;
+        if (kwh > maxKwh) maxKwh = kwh;
+      }
+      result[h] = Math.max(0, maxKwh - minKwh);
+      continue;
+    }
+
+    // Fallback: average power × duration
+    const avgPower = rs.reduce((s: number, r: any) => s + (r.activePowerW || 0), 0) / rs.length;
+    const durationHours = (rs.length * 5) / 60;
     result[h] = Math.max(0, (avgPower * durationHours) / 1000);
   }
   return result;
