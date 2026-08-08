@@ -41,11 +41,86 @@ Android foreground service, ami folyamatosan fut az otthoni telefonon.
 
 ### Room DB (v7)
 
-- **P1RawData** — perces P1 olvasatok (7 napig)
-- **P1DailySummary** — véglegesített napi P1 statisztikák (éjféli rollover)
-- **InverterHistoryEntity** — inverter teljesítmény görbe pontok
-- **InverterDailySummary** — napi napelem yield (producedKwh)
-- Explicit migrációk (MIGRATION_6_7), nem destruktív
+Adatbázis fájl: `homeassist_hub.db` (SQLite, az app private data könyvtárában)
+
+#### Táblák
+
+**`p1_raw_data`** — perces P1 smart meter olvasatok (7 napig őrzi, utána `deleteOlderThan` törli)
+
+| Oszlop | Típus | Leírás |
+|---|---|---|
+| `id` | Long (PK, autoGen) | Auto-increment primary key |
+| `timestamp` | Long | Epoch millis (olvasás ideje) |
+| `importT1Kwh` | Double | Kumulatív import T1 tarifa (kWh) |
+| `importT2Kwh` | Double | Kumulatív import T2 tarifa (kWh) |
+| `exportT1Kwh` | Double | Kumulatív export T1 tarifa (kWh) |
+| `exportT2Kwh` | Double | Kumulatív export T2 tarifa (kWh) |
+| `importTotalKwh` | Double | Teljes kumulált import (kWh) |
+| `exportTotalKwh` | Double | Teljes kumulált export (kWh) |
+| `currentPowerW` | Double | Jelenlegi teljesítmény (W) |
+| `powerImportW` | Double | Import teljesítmény (W) |
+| `powerExportW` | Double | Export teljesítmény (W) |
+| `l1V/l2V/l3V` | Double | Fázisonkénti feszültség (V) |
+| `l1A/l2A/l3A` | Double | Fázisonkénti áramerősség (A) |
+| `powerImportL1W.../powerExportL1W...` | Double | Fázisonkénti import/export (W) |
+| `powerFactor` | Double | Teljesítménytényező |
+| `frequencyHz` | Double | Hálózati frekvencia (Hz) |
+| `currentTariff` | Int | Aktuális tarifa (1 vagy 2) |
+
+**`p1_daily_summary`** — véglegesített napi P1 statisztikák (éjféli rolloverkor írja a `DailyStatsCalculator`)
+
+| Oszlop | Típus | Leírás |
+|---|---|---|
+| `date` | String (PK) | `yyyy-MM-dd` |
+| `totalConsumedKwh` | Double | Napi összes fogyasztás (kWh) |
+| `totalExportedKwh` | Double | Napi összes visszatáplálás (kWh) |
+| `importT1Kwh/importT2Kwh` | Double | Napi import tarifa 1/2 (kWh) |
+| `exportT1Kwh/exportT2Kwh` | Double | Napi export tarifa 1/2 (kWh) |
+| `minPowerW/maxPowerW/avgPowerW` | Double | Napi min/max/átlag teljesítmény (W) |
+| `maxImportW/maxExportW` | Double | Napi max import/export (W) |
+| `peakConsumptionHour/peakExportHour` | Int | Csúcs fogyasztás/export órája (0-23) |
+| `peakConsumptionKwh/peakExportKwh` | Double | Csúcs óra kWh értéke |
+| `selfConsumptionRatio` | Double | Önfogyasztási arány (0-1) |
+| `netEnergyKwh` | Double | Hálózati egyenleg (kWh) |
+| `avgL1V.../avgL1A...` | Double | Fázisonkénti átlag feszültség/áram |
+| `avgPowerFactor/avgFrequencyHz` | Double | Átlag PF és frekvencia |
+
+**`inverter_history`** — inverter aktív teljesítmény görbe pontok (5 percenkénti scrape)
+
+| Oszlop | Típus | Leírás |
+|---|---|---|
+| `id` | Long (PK, autoGen) | Auto-increment |
+| `timestamp` | Long | Epoch millis |
+| `activePowerW` | Double | Inverter aktív teljesítmény (W) |
+
+**`inverter_daily_summary`** — napi napelem yield (éjféli snapshot a Kiosk `dailyEnergy` értékből)
+
+| Oszlop | Típus | Leírás |
+|---|---|---|
+| `date` | String (PK) | `yyyy-MM-dd` |
+| `producedKwh` | Double | Napi termelt energia (kWh) |
+
+#### DAO-k
+
+- **`P1RawDao`** — `insert`, `getRange(startMs, endMs)`, `getLatest`, `getOldest`, `getRangeSince(sinceMs, limit)`, `deleteOlderThan`
+- **`P1DailySummaryDao`** — `upsert` (REPLACE), `getRange`, `getAll`, `getByDate`
+- **`InverterHistoryDao`** — `insert/insertAll`, `getRange`, `getRecent`, `getRangeSince`, `deleteOlderThan`
+- **`InverterDailySummaryDao`** — `upsert` (REPLACE), `getRange`, `getByDate`
+
+#### Adatgyűjtés ütemezése
+
+| Forrás | Gyakoriság | Mit csinál |
+|---|---|---|
+| `P1MeterController` | 60s | HTTP GET P1 meter → `P1RawData` insert + `P1HistoryBuffer` update |
+| `HuaweiCloudScraper` | 300s (5p) | Kiosk API scrape → `InverterHistoryEntity` insert + `InverterLiveData` update |
+| `DailyStatsCalculator` | Éjféli | `P1RawData` napi aggregáció → `P1DailySummary` upsert + `InverterDailySummary` upsert |
+| `CloudSyncManager` | 120s (2p) | Fő cursor: új adatok batch POST → Render. Backfill cursor: 7 nap gördülő újra-szinkron |
+
+#### Retention
+
+- `p1_raw_data`: 7 nap (Hub oldalon, `deleteOlderThan` hívás)
+- `inverter_history`: nincs explicit törlés (folyamatosan nő, de kis méret)
+- `p1_daily_summary` / `inverter_daily_summary`: határozatlan ideig (éjféli upsert)
 
 ### Hub UI — Dashboard
 
@@ -159,7 +234,7 @@ Android app, ami két adatforrást használ:
 | **P1PowerCard — Áramerősség** | L1/L2/L3 (A) | `P1ReadingDto.l1A/l2A/l3A` | P1 meter `current_phase_l1/l2/l3` |
 | **PhasePowerChip** (L1/L2/L3) | Import/Export per fázis (W) | `P1ReadingDto.powerImportL1W.../powerExportL1W...` | Hub számolt: ha meter per-fázis érték >0, azt használja. Egyébként `V×Bl×PF` (balanced current × power factor). Irány az összesített import/export alapján: ha `importW=0` → minden fázis exportál; ha `exportW=0` → minden importál; ha mindkettő >0 → **brute-force 2^3=8 assignment**: minden fázis VAGY import VAGY export (nem mindkettő egyszerre), kiválasztva az az elrendezés, ahol a fázis teljesítmények összege legjobban illeszkedik az összesített import/export értékekhez, majd skálázva a pontos összegre |
 | **HousePhaseChip** (L1/L2/L3) | Ház fogyasztás per fázis (W) | Számolt | `solarPerPhase + importLxW - exportLxW`, ahol `solarPerPhase = (exportW - importW + houseW) / 3`. `houseW` = Hub T-5 szinkronizált `realConsumptionW`. `solarRealtime = exportW - importW + houseW` (valós idejű P1 + szinkronizált házfogyasztás) |
-| **P1HistoryChart** | Teljesítmény görbe (import/export/consumption) | `P1ReadingDto` lista (100-1440 pont) | Consumption = `realConsumptionW` (Hub T-5 szinkronizált). Inverter power = `inverterPowerW` (Hub `findInverterPower` 10 perces tolerance + valós idejű pont tárolása minden scrape-nél, mert a Kiosk powerCurve órákkal lemaradhat). **Catmull-Rom spline** sima görbékhez (nem szögletes vonalak) |
+| **P1HistoryChart** | Teljesítmény görbe (import/export/consumption) | `P1ReadingDto` lista (100-1440 pont) | Consumption = `realConsumptionW` (Hub T-5 szinkronizált). Inverter power = `inverterPowerW` (Hub `findInverterPower` 10 perces tolerance + valós idejű pont tárolása minden scrape-nél, mert a Kiosk powerCurve órákkal lemaradhat). **Catmull-Rom spline** (tension=0.5) sima görbékhez + **gradiens kitöltés** (25%→0% alpha) a vonalak alatt |
 | **FreshnessBadge** | Adatfrissesség (zöld/sárga/piros) | `P1ReadingDto.timestamp` | `now - timestamp`: <90s=Élő, <6p=X perce, >6p=Elavult |
 | **CloudSyncBadge** | Cloud sync státusz | `cloudSync.lastSyncTime` (Socket.IO válaszban) | `now - lastSyncTime`: <5p=syncél, <15p=Xp, >15p=Xp |
 | **DailySummaryCard** | Napi inverter kWh, P1 import/export kWh, ház kWh | `dailySummary` (Socket.IO válaszban) | Hub `InverterLiveData.dailyEnergyKwh` + `P1HistoryBuffer.getDailyKwhDeltas()` |
@@ -193,10 +268,11 @@ Android app, ami két adatforrást használ:
 | **SummaryCards — Tariff 1/2** | kWh | Render `importT1Kwh/importT2Kwh` | P1 meter `active_import_energy_tariff_1/2` delta |
 | **SummaryCards — Export T1/T2** | kWh | Render `exportT1Kwh/exportT2Kwh` | P1 meter `active_export_energy_tariff_1/2` delta |
 | **SummaryCards — Fázisonkénti átlag** | V, A, PF, Hz átlag | Render `avgL1V.../avgL1A.../avgPowerFactor/avgFrequencyHz` | MongoDB P1RawReading napi átlag |
-| **EnergyColumnChart (Napi)** | Óránkénti fogyasztás/visszatáplálás (kWh) | Render `hourly[].consumedKwh/exportedKwh` | MongoDB órás aggregáció, csak eddigi órák |
+| **EnergyColumnChart (Napi)** | Óránkénti peak import/export (kW) | Render `hourly[].peakImportKw/peakExportKw` | MongoDB órás aggregáció, dinamikus Y-tengely (1/2/5/10/20/50... sorozat) |
 | **PeriodSummaryCards (Heti/Havi/Éves/Egyedi)** | Vételezés/visszatáplálás/termelés (kWh) | Render `GET /weekly/monthly/yearly/range` | MongoDB napi bontású aggregáció |
 | **PeriodSummaryCards — Önfogyasztási arány** | % | Számolt kliens oldalon | `((totalProducedKwh - totalExportedKwh) / totalProducedKwh) * 100` |
-| **EnergyColumnChart (Heti/Havi/Éves/Egyedi)** | Napi/havi bontású fogyasztás/visszatáplálás | Render `entries[].consumedKwh/exportedKwh` | MongoDB aggregáció |
+| **EnergyColumnChart (Heti)** | Napi fogyasztás/visszatáplálás (kWh) | Render `entries[].consumedKwh/exportedKwh` | Label: `Hé, Ke, Sze, Cs, Pé, Szo, Va` |
+| **EnergyColumnChart (Havi/Éves/Egyedi)** | Napi/havi bontású fogyasztás/visszatáplálás | Render `entries[].consumedKwh/exportedKwh` | MongoDB aggregáció, dinamikus Y-tengely |
 | **BaselineCard (Éves tab)** | Idei vételezés/visszatáplálás/egyenleg (kWh), jelenlegi óraállások | Socket.IO `get_p1_history` → `baseline` objektum | `currentTotal - baseline` (Hub oldalon számolva) |
 | **EnergyDateRangePicker** | Dátumtartomány választó | Material3 `DateRangePicker` | UTC `yyyy-MM-dd` formátum |
 
@@ -241,11 +317,184 @@ Node.js/TypeScript backend, Render-on fut. Részletes dokumentáció: [`relay/RE
 - **Socket.IO bróker** — szobák `homeId` alapján, WebRTC jelzés
 - **FusionSolar API proxy** — Kiosk + OpenAPI mód
 - **MongoDB Atlas** — energiadat tárolás (M0 free tier, 512MB)
-  - P1RawReading — 14 nap gördülő ablak
-  - InverterReading — 14 nap gördülő ablak
-  - P1DailySummary / InverterDailySummary — határozatlan ideig
-  - HomeToken — sync token registry
-- **REST API** — ingest (Hub→Render, `bulkWrite` upsert `{homeId, timestamp}` unique index) + retrieval (Client→Render), Bearer token auth
+- **REST API** — ingest (Hub→Render) + retrieval (Client→Render), Bearer token auth
+
+### MongoDB Atlas
+
+**Kluster:** `homeassisthub.tyd6meo.mongodb.net` (M0 free tier)
+**Adatbázis:** `homeassisthub`
+**User:** `hypnophediac_db_user`
+**Kapcsolat:** `MONGODB_URI` env var (Render Environment-ben beállítva)
+
+#### Kollekciók és sémák
+
+**`P1RawReading`** — perces P1 smart meter olvasatok (14 nap gördülő ablak)
+
+| Mező | Típus | Leírás |
+|---|---|---|
+| `homeId` | String (index) | Otthon azonosító (pl. `home1`) |
+| `timestamp` | Number (index) | Epoch millis |
+| `powerImportW` | Number | Import teljesítmény (W) |
+| `powerExportW` | Number | Export teljesítmény (W) |
+| `importT1Kwh` | Number | Kumulatív import T1 (kWh) |
+| `importT2Kwh` | Number | Kumulatív import T2 (kWh) |
+| `exportT1Kwh` | Number | Kumulatív export T1 (kWh) |
+| `exportT2Kwh` | Number | Kumulatív export T2 (kWh) |
+| `currentPowerW` | Number | Jelenlegi teljesítmény (W) |
+| `l1V/l2V/l3V` | Number | Fázis feszültségek (V) |
+| `l1A/l2A/l3A` | Number | Fázis áramok (A) |
+| `powerImportL1W.../powerExportL3W` | Number | Fázisonkénti import/export (W) |
+| `powerFactor` | Number | Teljesítménytényező |
+| `frequencyHz` | Number | Hálózati frekvencia (Hz) |
+| `currentTariff` | Number | Aktuális tarifa (1/2) |
+
+- **Unique index:** `{ homeId: 1, timestamp: 1 }` — duplikáció ellen
+- **Retention:** 14 nap (`startRawDataCleanup`: 6 óránként törli a 14 napnál régebbi dokumentumokat)
+
+**`InverterReading`** — inverter teljesítmény olvasatok (14 nap gördülő ablak)
+
+| Mező | Típus | Leírás |
+|---|---|---|
+| `homeId` | String (index) | Otthon azonosító |
+| `timestamp` | Number (index) | Epoch millis |
+| `activePowerW` | Number | Inverter aktív teljesítmény (W) |
+| `dailyEnergyKwh` | Number | Napi termelt energia (kWh) a Kiosk `dailyEnergy`-ből |
+
+- **Unique index:** `{ homeId: 1, timestamp: 1 }`
+- **Retention:** 14 nap (ugyanaz a cleanup)
+
+**`P1DailySummary`** — véglegesített napi P1 statisztikák (határozatlan ideig)
+
+| Mező | Típus | Leírás |
+|---|---|---|
+| `homeId` | String (index) | Otthon azonosító |
+| `date` | String | `yyyy-MM-dd` |
+| `totalConsumedKwh/totalExportedKwh` | Number | Napi összes fogyasztás/visszatáplálás |
+| `importT1Kwh/importT2Kwh` | Number | Napi import tarifa 1/2 |
+| `exportT1Kwh/exportT2Kwh` | Number | Napi export tarifa 1/2 |
+| `minPowerW/maxPowerW/avgPowerW` | Number | Napi min/max/átlag teljesítmény |
+| `maxImportW/maxExportW` | Number | Napi max import/export |
+| `peakConsumptionHour/peakExportHour` | Number | Csúcs órák (0-23) |
+| `peakConsumptionKwh/peakExportKwh` | Number | Csúcs óra kWh |
+| `selfConsumptionRatio` | Number | Önfogyasztási arány |
+| `netEnergyKwh` | Number | Hálózati egyenleg |
+| `avgL1V.../avgL1A...` | Number | Fázis átlagok |
+| `avgPowerFactor/avgFrequencyHz` | Number | Átlag PF és frekvencia |
+
+- **Unique index:** `{ homeId: 1, date: 1 }`
+- **Retention:** határozatlan ideig (napi 1 dokumentum)
+
+**`InverterDailySummary`** — napi napelem yield (határozatlan ideig)
+
+| Mező | Típus | Leírás |
+|---|---|---|
+| `homeId` | String (index) | Otthon azonosító |
+| `date` | String | `yyyy-MM-dd` |
+| `producedKwh` | Number | Napi termelt energia (kWh) |
+
+- **Unique index:** `{ homeId: 1, date: 1 }`
+- **Retention:** határozatlan ideig
+
+**`HomeToken`** — sync token registry
+
+| Mező | Típus | Leírás |
+|---|---|---|
+| `homeId` | String (unique) | Otthon azonosító |
+| `syncToken` | String | Bearer token |
+| `createdAt` | Date | Létrehozás ideje |
+
+### REST API endpointok
+
+#### Ingest (Hub → Render)
+
+**`POST /api/energy/:homeId/ingest`** — Batch P1 + inverter olvasatok feltöltése
+
+- **Auth:** Bearer syncToken
+- **Body:** `{ p1Readings: [...], inverterReadings: [...] }`
+- **Működés:** `bulkWrite` upsert `{ homeId, timestamp }` filterrel — idempotens, ismételt feltöltés nem duplikál
+- **Válasz:** `{ p1Inserted, invInserted }`
+
+**`POST /api/energy/:homeId/daily-summary`** — Napi összegzők feltöltése
+
+- **Auth:** Bearer syncToken
+- **Body:** `{ p1Summary: {...}, inverterSummary: { date, producedKwh } }`
+- **Működés:** `findOneAndUpdate` upsert `{ homeId, date }` filterrel
+
+#### Retrieval (Client → Render)
+
+**`GET /api/energy/:homeId/daily`** — Napi energiestatisztika
+
+- **Query:** MongoDB `P1RawReading.find({ homeId, timestamp: { $gte: startMs, $lt: endMs } })` a mai napra (Budapest timezone-aware)
+- **Számítások:**
+  - `computeHourlyBuckets(rawReadings)` — óránként (0-23):
+    - `peakImportKw` / `peakExportKw` = max `powerImportW` / `powerExportW` az órában (kW)
+    - `consumedKwh` / `exportedKwh` = `(max(importT1+T2) - min(importT1+T2))` az órában (kWh)
+    - **Nulla kumulált értékű olvasások szűrése** (debug/adathibák kiszűrése)
+  - `computeDailyConsumedExported(rawReadings)` — napi összes:
+    - `consumed` = `max(importT1+T2) - min(importT1+T2)` (nulla szűrés után)
+    - `exported` = `max(exportT1+T2) - min(exportT1+T2)`
+  - Csúcs órák: `peakImportKw` / `peakExportKw` alapján
+  - `producedKwh` = `InverterDailySummary.producedKwh` vagy `InverterReading.dailyEnergyKwh` (legutolsó)
+- **Időzóna-kezelés:**
+  - `dateRangeMillis(dateStr)` — Budapest éjfél UTC millis (DST-aware, `Intl.DateTimeFormat` alapú)
+  - `budapestHour(ts)` — Budapest óra (0-23), **éjfél = 0** (nem 24, `Intl.DateTimeFormat` bug fix)
+  - Query range: `[startMs, endMs)` — half-open interval
+
+**`GET /api/energy/:homeId/weekly`** — Heti statisztika (utolsó 7 nap)
+
+- **Label:** Magyar napnevek (`Hé, Ke, Sze, Cs, Pé, Szo, Va`)
+- **Működés:** Minden napra `P1RawReading` query + `computeDailyConsumedExported` + `InverterDailySummary`
+
+**`GET /api/energy/:homeId/monthly`** — Havi statisztika (aktuális hónap napjai)
+
+- **Label:** Nap sorszáma (`1, 2, 3, ...`)
+- **Működés:** Ugyanaz, mint heti, de a hónap elejétől
+
+**`GET /api/energy/:homeId/yearly`** — Éves statisztika (12 hónap)
+
+- **Label:** Hónap neve (`Jan, Feb, Mar, ...`)
+- **Működés:** Havi aggregáció `P1RawReading` + `InverterDailySummary` alapján
+
+**`GET /api/energy/:homeId/range?from=&to=`** — Egyedi dátumtartomány
+
+- **Label:** `MM-DD` formátum
+- **Működés:** Ugyanaz, mint heti, de egyedi tartományra
+
+### Energia számítási logika
+
+#### Napi fogyasztás/visszatáplálás (kWh)
+
+```
+consumedKwh = max(importT1Kwh + importT2Kwh) - min(importT1Kwh + importT2Kwh)
+exportedKwh = max(exportT1Kwh + exportT2Kwh) - min(exportT1Kwh + exportT2Kwh)
+```
+
+A P1 mérőóra **kumulált állásokat** ad (beüzemelés óta), így a napi fogyasztás a nap első és utolsó olvasásának különbsége. A `min/max` megközelítés (nem `first/last`) azért szükséges, mert a backfill során az olvasások időrendben nem feltétlenül sorrendben érkeznek.
+
+**Nulla szűrés:** A `0` kumulált értékű olvasások (debug/test adatok) szűrése történik a számítás előtt, hogy elkerüljük a torzított eredményeket.
+
+#### Óránkénti peak kW (grafikon tüskék)
+
+```
+peakImportKw = max(powerImportW) / 1000   (az óra összes olvasásából)
+peakExportKw = max(powerExportW) / 1000
+```
+
+Ez a **napi grafikon** oszlopainak magassága — a bojler/napelem tüskéket mutatja, nem az átlagos teljesítményt.
+
+#### Önfogyasztási arány
+
+```
+selfConsumptionRatio = (producedKwh - exportedKwh) / producedKwh
+```
+
+#### Ház fogyasztás (valós idejű, Hub oldalon)
+
+```
+realConsumptionW = inverterPowerW + (P1importW - P1exportW)
+```
+
+A Kiosk API ~5 perces késéssel dolgozik, ezért a P1 adatot T-5 perccel korábbi olvasattal kell használni.
 
 ## Eszközök
 
