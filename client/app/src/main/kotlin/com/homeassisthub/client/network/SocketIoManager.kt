@@ -27,9 +27,14 @@ class SocketIoManager(
     private var connectLatch = CompletableDeferred<Boolean>()
     private var registerLatch = CompletableDeferred<Boolean>()
     private var onPeerJoined: ((String) -> Unit)? = null
+    private var onCameraFrame: ((deviceId: String, base64: String) -> Unit)? = null
 
     fun setOnPeerJoined(callback: (String) -> Unit) {
         onPeerJoined = callback
+    }
+
+    fun setOnCameraFrame(callback: (deviceId: String, base64: String) -> Unit) {
+        onCameraFrame = callback
     }
 
     fun connect() {
@@ -108,6 +113,15 @@ class SocketIoManager(
                 pendingRequests.remove(requestId)?.complete(payload)
             } else if (pendingRequests.containsKey(requestId)) {
                 fallbackResponses[requestId] = payload
+            }
+        }
+
+        sock.on("camera_frame") { args ->
+            val payload = args.getOrNull(0) as? JSONObject ?: return@on
+            val deviceId = payload.optString("deviceId")
+            val frame = payload.optString("frame")
+            if (deviceId.isNotEmpty() && frame.isNotEmpty()) {
+                onCameraFrame?.invoke(deviceId, frame)
             }
         }
 

@@ -54,6 +54,12 @@ export function registerSocketHandlers(io: Server, socket: Socket<any, any, any,
     socket.to(payload.homeId).emit("command_response", payload);
   });
 
+  // Hub -> Client: camera frame (MJPEG proxy stream)
+  socket.on("camera_frame", (payload: { homeId?: string; deviceId?: string; frame?: string; timestamp?: number }) => {
+    if (!requireRoom(socket, payload?.homeId)) return;
+    socket.to(payload.homeId!).emit("camera_frame", payload);
+  });
+
   // WebRTC signaling (bidirectional, forwarded to the rest of the room)
   socket.on("webrtc_offer", (payload: WebRtcOfferPayload) => {
     if (!requireRoom(socket, payload?.homeId)) return;

@@ -3,6 +3,7 @@ package com.homeassisthub.hub.bridge
 import com.homeassisthub.hub.controller.CommandResult
 import com.homeassisthub.hub.controller.DeviceController
 import com.homeassisthub.hub.controller.DeviceControllerFactory
+import com.homeassisthub.hub.controller.RtspStreamProxy
 import com.homeassisthub.hub.data.db.InverterDailySummaryDao
 import com.homeassisthub.hub.data.db.InverterHistoryDao
 import com.homeassisthub.hub.data.db.InverterHistoryEntity
@@ -30,6 +31,8 @@ class CommandRouter(
 ) {
 
     private val controllerCache = ConcurrentHashMap<String, DeviceController>()
+    private val streamProxies = ConcurrentHashMap<String, RtspStreamProxy>()
+    var frameEmitter: ((deviceId: String, base64Jpeg: String) -> Unit)? = null
 
     suspend fun handle(request: JSONObject): JSONObject {
         val homeId = request.optString("homeId")
@@ -41,6 +44,8 @@ class CommandRouter(
         val outcome = runCatching {
             if (deviceId == HUB_PSEUDO_DEVICE_ID) {
                 handleHubAction(action, params)
+            } else if (action == "start_stream" || action == "stop_stream") {
+                handleStreamCommand(deviceId, action, params)
             } else {
                 val controller = controllerCache.getOrPut(deviceId) {
                     val credential = credentialStore.getCredential(deviceId)
@@ -563,6 +568,41 @@ class CommandRouter(
             CommandResult.Success(mapOf("entries" to entries, "totalConsumedKwh" to totalConsumed, "totalExportedKwh" to totalExported, "totalProducedKwh" to totalProduced))
         }
         else -> CommandResult.Failure("Unsupported hub action '$action'")
+    }
+
+    private fun handleStreamCommand(deviceId: String, action: String, params: Map<String, String>): CommandResult {
+        when (action) {
+            "start_stream" -> {
+                // Stop existing stream if any
+                streamProxies.remove(deviceId)?.stop()
+
+                val credential = credentialStore.getCredential(deviceId)
+                    ?: return CommandResult.Failure("No stored credential for device '$deviceId'")
+                if (credential.deviceType != DeviceControllerFactory.DEVICE_TYPE_RTSP_CAMERA) {
+                    return CommandResult.Failure("Streaming only supported for RTSP cameras")
+                }
+
+                val fps = params["fps"]?.toIntOrNull() ?: 3
+                val emitter = frameEmitter
+                    ?: return CommandResult.Failure("No frame emitter configured")
+
+                val proxy = RtspStreamProxy(
+                    rtspUrl = credential.ipAddress,
+                    onFrame = { base64 -> emitter(deviceId, base64) },
+                    fps = fps
+                )
+                streamProxies[deviceId] = proxy
+                proxy.start()
+                Log.i(TAG, "Stream started for $deviceId, fps=$fps")
+                return CommandResult.Success(mapOf("streaming" to true, "deviceId" to deviceId, "fps" to fps))
+            }
+            "stop_stream" -> {
+                streamProxies.remove(deviceId)?.stop()
+                Log.i(TAG, "Stream stopped for $deviceId")
+                return CommandResult.Success(mapOf("streaming" to false, "deviceId" to deviceId))
+            }
+            else -> return CommandResult.Failure("Unknown stream action '$action'")
+        }
     }
 
     private fun DeviceCredential.toSummaryMap(): Map<String, Any?> = mutableMapOf(

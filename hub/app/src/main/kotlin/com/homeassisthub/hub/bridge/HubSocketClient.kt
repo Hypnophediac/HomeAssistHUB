@@ -94,6 +94,17 @@ class HubSocketClient(
         }
 
         Log.i(TAG, "Hub connecting to relay at $relayUrl ...")
+
+        // Wire up frame emitter for camera streaming
+        commandRouter.frameEmitter = { deviceId, base64Jpeg ->
+            val framePayload = JSONObject()
+                .put("homeId", homeId)
+                .put("deviceId", deviceId)
+                .put("frame", base64Jpeg)
+                .put("timestamp", System.currentTimeMillis())
+            sock.emit("camera_frame", framePayload)
+        }
+
         sock.connect()
     }
 

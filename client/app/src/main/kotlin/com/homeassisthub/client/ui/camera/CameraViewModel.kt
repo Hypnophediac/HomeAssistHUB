@@ -9,6 +9,7 @@ import com.homeassisthub.client.data.ClientConfigStore
 import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +36,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _snapshotLoading = MutableStateFlow<Set<String>>(emptySet())
     val snapshotLoading: StateFlow<Set<String>> = _snapshotLoading.asStateFlow()
+
+    private val _liveFrames = MutableStateFlow<Map<String, String>>(emptyMap())
+    val liveFrames: StateFlow<Map<String, String>> = _liveFrames.asStateFlow()
+
+    private val _streamingDevices = MutableStateFlow<Set<String>>(emptySet())
+    val streamingDevices: StateFlow<Set<String>> = _streamingDevices.asStateFlow()
 
     fun refresh() {
         Log.i(TAG, "refresh() called")
@@ -104,6 +111,33 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         cams.forEach { fetchSnapshot(it.deviceId) }
     }
 
+    fun startStream(deviceId: String) {
+        viewModelScope.launch {
+            val config = configStore.getConfig() ?: return@launch
+            val manager = ensureSocketConnected(config)
+            Log.i(TAG, "Starting stream for $deviceId")
+            val response = manager.sendCommand(deviceId, "start_stream", timeoutMs = 10_000L)
+            if (response.optBoolean("success")) {
+                _streamingDevices.value = _streamingDevices.value + deviceId
+                Log.i(TAG, "Stream started for $deviceId")
+            } else {
+                Log.e(TAG, "Failed to start stream for $deviceId: ${response.optString("error")}")
+                _statusMessage.value = "Stream ind\u00edt\u00e1sa sikertelen: ${response.optString("error")}"
+            }
+        }
+    }
+
+    fun stopStream(deviceId: String) {
+        viewModelScope.launch {
+            val config = configStore.getConfig() ?: return@launch
+            val manager = ensureSocketConnected(config)
+            Log.i(TAG, "Stopping stream for $deviceId")
+            manager.sendCommand(deviceId, "stop_stream", timeoutMs = 5_000L)
+            _streamingDevices.value = _streamingDevices.value - deviceId
+            _liveFrames.value = _liveFrames.value - deviceId
+        }
+    }
+
     fun clearStatus() {
         _statusMessage.value = null
         _ptzStatus.value = null
@@ -139,6 +173,9 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     refresh()
                 }
             }
+            it.setOnCameraFrame { deviceId, base64 ->
+                _liveFrames.value = _liveFrames.value + (deviceId to base64)
+            }
             it.connect()
             Log.i(TAG, "SocketIoManager.connect() called")
             socketManager = it
@@ -146,7 +183,18 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
-        socketManager?.disconnect()
+        val mgr = socketManager
+        val devices = _streamingDevices.value.toList()
+        if (mgr != null && devices.isNotEmpty()) {
+            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                for (deviceId in devices) {
+                    mgr.sendCommand(deviceId, "stop_stream")
+                }
+                mgr.disconnect()
+            }
+        } else {
+            socketManager?.disconnect()
+        }
         super.onCleared()
     }
 

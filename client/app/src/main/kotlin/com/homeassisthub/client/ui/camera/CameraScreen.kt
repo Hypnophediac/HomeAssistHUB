@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,6 +57,8 @@ fun CameraScreen(viewModel: CameraViewModel = viewModel()) {
     val ptzStatus by viewModel.ptzStatus.collectAsState()
     val snapshots by viewModel.snapshots.collectAsState()
     val snapshotLoading by viewModel.snapshotLoading.collectAsState()
+    val liveFrames by viewModel.liveFrames.collectAsState()
+    val streamingDevices by viewModel.streamingDevices.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -127,7 +130,16 @@ fun CameraScreen(viewModel: CameraViewModel = viewModel()) {
                         streamUrl = camera.streamUrl ?: camera.ipAddress,
                         snapshotBase64 = snapshots[camera.deviceId],
                         isLoading = snapshotLoading.contains(camera.deviceId),
-                        onRefresh = { viewModel.fetchSnapshot(camera.deviceId) }
+                        onRefresh = { viewModel.fetchSnapshot(camera.deviceId) },
+                        isStreaming = streamingDevices.contains(camera.deviceId),
+                        liveFrameBase64 = liveFrames[camera.deviceId],
+                        onToggleStream = {
+                            if (streamingDevices.contains(camera.deviceId)) {
+                                viewModel.stopStream(camera.deviceId)
+                            } else {
+                                viewModel.startStream(camera.deviceId)
+                            }
+                        }
                     )
                 } else {
                     PtzCameraCard(
@@ -227,9 +239,12 @@ private fun RtspCameraCard(
     streamUrl: String,
     snapshotBase64: String?,
     isLoading: Boolean,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    isStreaming: Boolean = false,
+    liveFrameBase64: String? = null,
+    onToggleStream: () -> Unit = {}
 ) {
-    val bitmap = remember(snapshotBase64) {
+    val snapshotBitmap = remember(snapshotBase64) {
         snapshotBase64?.let {
             try {
                 val bytes = Base64.decode(it, Base64.NO_WRAP)
@@ -237,6 +252,17 @@ private fun RtspCameraCard(
             } catch (e: Exception) { null }
         }
     }
+
+    val liveBitmap = remember(liveFrameBase64) {
+        liveFrameBase64?.let {
+            try {
+                val bytes = Base64.decode(it, Base64.NO_WRAP)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            } catch (e: Exception) { null }
+        }
+    }
+
+    val displayBitmap = if (isStreaming) liveBitmap else snapshotBitmap
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -266,12 +292,24 @@ private fun RtspCameraCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                if (isLoading) {
+                if (isLoading && !isStreaming) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp
                     )
-                } else {
+                }
+                IconButton(
+                    onClick = onToggleStream,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isStreaming) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                        contentDescription = if (isStreaming) "Élő stream leállítása" else "Élő stream indítása",
+                        tint = if (isStreaming) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                if (!isStreaming) {
                     IconButton(
                         onClick = onRefresh,
                         modifier = Modifier.size(36.dp)
@@ -295,19 +333,43 @@ private fun RtspCameraCard(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    if (bitmap != null) {
+                    if (displayBitmap != null) {
                         Image(
-                            bitmap = bitmap.asImageBitmap(),
+                            bitmap = displayBitmap.asImageBitmap(),
                             contentDescription = "Kamera kép",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                    } else if (isLoading) {
+                        if (isStreaming) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                shape = RoundedCornerShape(4.dp),
+                                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+                            ) {
+                                Text(
+                                    text = "● ÉLŐ",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onError,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    } else if (isLoading && !isStreaming) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Kép betöltése...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else if (isStreaming) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Csatlakozás a streamhez...",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
