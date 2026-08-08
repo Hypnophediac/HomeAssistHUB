@@ -118,15 +118,19 @@ function computeHourlyBuckets(readings: any[]): any[] {
         maxImportW = Math.max(maxImportW, r.powerImportW || 0);
         maxExportW = Math.max(maxExportW, r.powerExportW || 0);
       }
-      // Actual kWh for this hour (first/last delta within the hour)
-      const first = rs[0];
-      const last = rs[rs.length - 1];
-      const consumedKwh = Math.max(0,
-        (last.importT1Kwh + last.importT2Kwh) - (first.importT1Kwh + first.importT2Kwh)
-      );
-      const exportedKwh = Math.max(0,
-        (last.exportT1Kwh + last.exportT2Kwh) - (first.exportT1Kwh + first.exportT2Kwh)
-      );
+      // Actual kWh for this hour (min/max cumulative delta within the hour)
+      let minImp = Infinity, maxImp = -Infinity;
+      let minExp = Infinity, maxExp = -Infinity;
+      for (const r of rs) {
+        const imp = (r.importT1Kwh || 0) + (r.importT2Kwh || 0);
+        const exp = (r.exportT1Kwh || 0) + (r.exportT2Kwh || 0);
+        if (imp < minImp) minImp = imp;
+        if (imp > maxImp) maxImp = imp;
+        if (exp < minExp) minExp = exp;
+        if (exp > maxExp) maxExp = exp;
+      }
+      const consumedKwh = Math.max(0, maxImp - minImp);
+      const exportedKwh = Math.max(0, maxExp - minExp);
       return {
         hour: h,
         consumedKwh,
@@ -139,17 +143,21 @@ function computeHourlyBuckets(readings: any[]): any[] {
   });
 }
 
-// ── Helper: compute daily consumed/exported from first/last raw readings ──
+// ── Helper: compute daily consumed/exported from min/max cumulative meter values ──
 function computeDailyConsumedExported(readings: any[]): { consumed: number; exported: number } {
   if (readings.length < 2) return { consumed: 0, exported: 0 };
-  const first = readings[0];
-  const last = readings[readings.length - 1];
-  const consumed = Math.max(0,
-    (last.importT1Kwh + last.importT2Kwh) - (first.importT1Kwh + first.importT2Kwh)
-  );
-  const exported = Math.max(0,
-    (last.exportT1Kwh + last.exportT2Kwh) - (first.exportT1Kwh + first.exportT2Kwh)
-  );
+  let minImport = Infinity, maxImport = -Infinity;
+  let minExport = Infinity, maxExport = -Infinity;
+  for (const r of readings) {
+    const imp = (r.importT1Kwh || 0) + (r.importT2Kwh || 0);
+    const exp = (r.exportT1Kwh || 0) + (r.exportT2Kwh || 0);
+    if (imp < minImport) minImport = imp;
+    if (imp > maxImport) maxImport = imp;
+    if (exp < minExport) minExport = exp;
+    if (exp > maxExport) maxExport = exp;
+  }
+  const consumed = Math.max(0, maxImport - minImport);
+  const exported = Math.max(0, maxExport - minExport);
   return { consumed, exported };
 }
 
