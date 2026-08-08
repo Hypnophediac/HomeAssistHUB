@@ -710,34 +710,60 @@ private fun P1HistoryChart(readings: List<P1ReadingDto>) {
                 this.color = color.toArgb()
                 isAntiAlias = true
                 style = android.graphics.Paint.Style.STROKE
-                strokeWidth = 2f
+                strokeWidth = 3f
                 strokeJoin = android.graphics.Paint.Join.ROUND
                 strokeCap = android.graphics.Paint.Cap.ROUND
             }
-            val path = android.graphics.Path()
             val pts = todayReadings.map { r ->
                 val x = timeToX(r.timestamp)
                 val y = chartH - (series(r) / niceMax * chartH)
                 androidx.compose.ui.geometry.Offset(x, y)
             }
+            val path = android.graphics.Path()
+            val fillPath = android.graphics.Path()
             if (pts.size == 2) {
                 path.moveTo(pts[0].x, pts[0].y)
                 path.lineTo(pts[1].x, pts[1].y)
+                fillPath.moveTo(pts[0].x, chartH)
+                fillPath.lineTo(pts[0].x, pts[0].y)
+                fillPath.lineTo(pts[1].x, pts[1].y)
+                fillPath.lineTo(pts[1].x, chartH)
+                fillPath.close()
             } else {
-                // Catmull-Rom spline → cubic bezier for smooth curves
+                // Catmull-Rom spline with stronger smoothing (tension=0.5)
+                val tension = 0.5f
                 path.moveTo(pts[0].x, pts[0].y)
+                fillPath.moveTo(pts[0].x, chartH)
+                fillPath.lineTo(pts[0].x, pts[0].y)
                 for (i in 0 until pts.size - 1) {
                     val p0 = pts[if (i == 0) 0 else i - 1]
                     val p1 = pts[i]
                     val p2 = pts[i + 1]
                     val p3 = pts[if (i + 2 < pts.size) i + 2 else i + 1]
-                    val c1x = p1.x + (p2.x - p0.x) / 6f
-                    val c1y = p1.y + (p2.y - p0.y) / 6f
-                    val c2x = p2.x - (p3.x - p1.x) / 6f
-                    val c2y = p2.y - (p3.y - p1.y) / 6f
+                    val c1x = p1.x + (p2.x - p0.x) * tension / 3f
+                    val c1y = p1.y + (p2.y - p0.y) * tension / 3f
+                    val c2x = p2.x - (p3.x - p1.x) * tension / 3f
+                    val c2y = p2.y - (p3.y - p1.y) * tension / 3f
                     path.cubicTo(c1x, c1y, c2x, c2y, p2.x, p2.y)
+                    fillPath.cubicTo(c1x, c1y, c2x, c2y, p2.x, p2.y)
                 }
+                fillPath.lineTo(pts.last().x, chartH)
+                fillPath.close()
             }
+            // Gradient fill under the line
+            val gradient = android.graphics.LinearGradient(
+                pts.first().x, 0f,
+                pts.first().x, chartH,
+                color.copy(alpha = 0.25f).toArgb(),
+                color.copy(alpha = 0.0f).toArgb(),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            val fillPaint = android.graphics.Paint().apply {
+                shader = gradient
+                isAntiAlias = true
+                style = android.graphics.Paint.Style.FILL
+            }
+            drawContext.canvas.nativeCanvas.drawPath(fillPath, fillPaint)
             drawContext.canvas.nativeCanvas.drawPath(path, paint)
         }
 

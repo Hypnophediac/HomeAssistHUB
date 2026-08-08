@@ -1032,8 +1032,18 @@ private fun ZoomableEnergyColumnChart(
         consumedValues.maxOrNull()?.toFloat() ?: 0f,
         exportedValues.maxOrNull()?.toFloat() ?: 0f
     )
-    // Fixed Y-axis scale: always 0-5 kWh
-    val niceMax = 5.0f
+    // Dynamic Y-axis: round up to nearest nice number
+    val niceMax = if (maxDataValue <= 0f) 1.0f else {
+        val magnitude = Math.pow(10.0, Math.floor(Math.log10(maxDataValue.toDouble()))).toFloat()
+        val normalized = maxDataValue / magnitude
+        val niceNormalized = when {
+            normalized <= 1.0 -> 1.0f
+            normalized <= 2.0 -> 2.0f
+            normalized <= 5.0 -> 5.0f
+            else -> 10.0f
+        }
+        niceNormalized * magnitude
+    }
 
     androidx.compose.foundation.Canvas(
         modifier = modifier
@@ -1080,7 +1090,9 @@ private fun ZoomableEnergyColumnChart(
                 strokeWidth = 1f
             )
             drawContext.canvas.nativeCanvas.drawText(
-                String.format(java.util.Locale.US, "%.2f", value),
+                if (niceMax >= 100) String.format(java.util.Locale.US, "%.0f", value)
+                else if (niceMax >= 10) String.format(java.util.Locale.US, "%.1f", value)
+                else String.format(java.util.Locale.US, "%.2f", value),
                 labelW - yLabelPaddingPx,
                 y + axisFontSizePx / 3f,
                 yPaint

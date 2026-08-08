@@ -267,6 +267,7 @@ router.get("/:homeId/weekly", syncTokenAuth, async (req: Request & { homeId?: st
     const entries: any[] = [];
     let totalConsumed = 0, totalExported = 0, totalProduced = 0;
 
+    const dayNames = ["Va", "Hé", "Ke", "Sze", "Cs", "Pé", "Szo"];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -280,7 +281,7 @@ router.get("/:homeId/weekly", syncTokenAuth, async (req: Request & { homeId?: st
       const invDaily = await InverterDailySummary.findOne({ homeId, date: dateStr }).lean();
       const produced = invDaily?.producedKwh ?? null;
 
-      entries.push({ label: dateStr.slice(5), consumedKwh: consumed, exportedKwh: exported, producedKwh: produced });
+      entries.push({ label: dayNames[d.getDay()], consumedKwh: consumed, exportedKwh: exported, producedKwh: produced });
       totalConsumed += consumed;
       totalExported += exported;
       totalProduced += produced ?? 0;
