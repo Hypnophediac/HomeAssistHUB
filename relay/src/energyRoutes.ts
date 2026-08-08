@@ -118,10 +118,17 @@ function computeHourlyBuckets(readings: any[]): any[] {
         maxImportW = Math.max(maxImportW, r.powerImportW || 0);
         maxExportW = Math.max(maxExportW, r.powerExportW || 0);
       }
-      // Actual kWh for this hour (min/max cumulative delta within the hour)
+      // Actual kWh for this hour (min/max cumulative delta, filtering zero debug data)
+      const validRs = rs.filter(r =>
+        (r.importT1Kwh || 0) + (r.importT2Kwh || 0) > 0 ||
+        (r.exportT1Kwh || 0) + (r.exportT2Kwh || 0) > 0
+      );
+      if (validRs.length < 2) {
+        return { hour: h, consumedKwh: 0, exportedKwh: 0, peakImportKw: maxImportW / 1000, peakExportKw: maxExportW / 1000 };
+      }
       let minImp = Infinity, maxImp = -Infinity;
       let minExp = Infinity, maxExp = -Infinity;
-      for (const r of rs) {
+      for (const r of validRs) {
         const imp = (r.importT1Kwh || 0) + (r.importT2Kwh || 0);
         const exp = (r.exportT1Kwh || 0) + (r.exportT2Kwh || 0);
         if (imp < minImp) minImp = imp;
@@ -145,10 +152,15 @@ function computeHourlyBuckets(readings: any[]): any[] {
 
 // ── Helper: compute daily consumed/exported from min/max cumulative meter values ──
 function computeDailyConsumedExported(readings: any[]): { consumed: number; exported: number } {
-  if (readings.length < 2) return { consumed: 0, exported: 0 };
+  // Filter out readings with zero cumulative values (debug/test data)
+  const valid = readings.filter(r =>
+    (r.importT1Kwh || 0) + (r.importT2Kwh || 0) > 0 ||
+    (r.exportT1Kwh || 0) + (r.exportT2Kwh || 0) > 0
+  );
+  if (valid.length < 2) return { consumed: 0, exported: 0 };
   let minImport = Infinity, maxImport = -Infinity;
   let minExport = Infinity, maxExport = -Infinity;
-  for (const r of readings) {
+  for (const r of valid) {
     const imp = (r.importT1Kwh || 0) + (r.importT2Kwh || 0);
     const exp = (r.exportT1Kwh || 0) + (r.exportT2Kwh || 0);
     if (imp < minImport) minImport = imp;
