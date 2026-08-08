@@ -5,7 +5,14 @@ import com.homeassisthub.client.network.model.OpenMeteoResponseDto
 data class PvForecastResult(
     val estimatedTodayKwh: Double,
     val currentTemperatureC: Double?,
-    val currentCloudCoverPercent: Double?
+    val currentCloudCoverPercent: Double?,
+    val hourlyEstimates: List<HourlyEstimate> = emptyList()
+)
+
+data class HourlyEstimate(
+    val hour: Int,
+    val kwh: Double,
+    val isPast: Boolean
 )
 
 /**
@@ -27,18 +34,28 @@ object PvForecastCalculator {
         performanceRatio: Double
     ): PvForecastResult {
         val radiations = forecast.hourly.shortwave_radiation
-        val estimatedKwh = radiations.sumOf { radiation ->
-            pvCapacityKwp * (radiation / 1000.0) * performanceRatio
+        val times = forecast.hourly.time
+        val nowHourIndex = currentHourIndex(times)
+
+        val hourlyEstimates = radiations.mapIndexed { i, radiation ->
+            val hour = parseHourFromTime(times.getOrNull(i))
+            val kwh = pvCapacityKwp * (radiation / 1000.0) * performanceRatio
+            HourlyEstimate(
+                hour = hour,
+                kwh = kwh,
+                isPast = i < nowHourIndex
+            )
         }
 
-        val nowHourIndex = currentHourIndex(forecast.hourly.time)
+        val estimatedKwh = hourlyEstimates.sumOf { it.kwh }
         val currentTemp = forecast.hourly.temperature_2m.getOrNull(nowHourIndex)
         val currentCloud = forecast.hourly.cloudcover.getOrNull(nowHourIndex)
 
         return PvForecastResult(
             estimatedTodayKwh = estimatedKwh,
             currentTemperatureC = currentTemp,
-            currentCloudCoverPercent = currentCloud
+            currentCloudCoverPercent = currentCloud,
+            hourlyEstimates = hourlyEstimates
         )
     }
 
@@ -49,5 +66,13 @@ object PvForecastCalculator {
             .format(java.util.Date())
         val exactMatch = times.indexOfFirst { it.startsWith(nowHourPrefix) }
         return if (exactMatch >= 0) exactMatch else times.size - 1
+    }
+
+    /** Parses hour (0-23) from "2025-01-15T14:00" format. */
+    private fun parseHourFromTime(time: String?): Int {
+        if (time == null) return -1
+        return runCatching {
+            time.substringAfter("T").substringBefore(":").toInt()
+        }.getOrDefault(-1)
     }
 }

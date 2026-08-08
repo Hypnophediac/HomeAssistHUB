@@ -100,6 +100,33 @@ function computeDailyStatsFromRaw(readings: any[], totalConsumed: number, totalE
 
 
 // ── Helper: compute hourly buckets from raw P1 readings for a single day ──
+// Returns per-hour produced kWh from InverterReading records.
+// Uses dailyEnergyKwh delta (max - min) within each hour.
+function computeHourlyInverterProduction(invReadings: any[]): Record<number, number> {
+  const buckets: Record<number, any[]> = {};
+  for (const r of invReadings) {
+    const hour = budapestHour(r.timestamp);
+    if (!buckets[hour]) buckets[hour] = [];
+    buckets[hour].push(r);
+  }
+  const result: Record<number, number> = {};
+  for (let h = 0; h < 24; h++) {
+    const rs = buckets[h];
+    if (!rs || rs.length < 2) {
+      result[h] = 0;
+      continue;
+    }
+    let minKwh = Infinity, maxKwh = -Infinity;
+    for (const r of rs) {
+      const kwh = r.dailyEnergyKwh || 0;
+      if (kwh < minKwh) minKwh = kwh;
+      if (kwh > maxKwh) maxKwh = kwh;
+    }
+    result[h] = Math.max(0, maxKwh - minKwh);
+  }
+  return result;
+}
+
 // Returns both:
 // - consumedKwh / exportedKwh: actual energy (kWh) for that hour (for totals)
 // - peakImportKw / peakExportKw: max instantaneous power (kW) for that hour (for chart spikes)
@@ -202,6 +229,16 @@ router.get("/:homeId/daily", syncTokenAuth, async (req: Request & { homeId?: str
     const invDaily = await InverterDailySummary.findOne({ homeId, date: today }).lean();
     const latestInv = await InverterReading.findOne({ homeId }).sort({ timestamp: -1 }).lean();
     const producedKwh = invDaily?.producedKwh ?? latestInv?.dailyEnergyKwh ?? 0;
+
+    // Fetch today's inverter readings for hourly production breakdown
+    const invReadings = await InverterReading
+      .find({ homeId, timestamp: { $gte: startMs, $lt: endMs } })
+      .sort({ timestamp: 1 })
+      .lean();
+    const hourlyProduction = computeHourlyInverterProduction(invReadings);
+    for (const h of hourly) {
+      h.producedKwh = hourlyProduction[h.hour] || 0;
+    }
 
     // Get today's P1 daily summary (if the Hub has pushed one)
     const p1Daily = await P1DailySummary.findOne({ homeId, date: today }).lean();

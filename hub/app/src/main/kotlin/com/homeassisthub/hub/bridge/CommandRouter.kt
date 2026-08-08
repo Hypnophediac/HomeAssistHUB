@@ -88,11 +88,19 @@ class CommandRouter(
                 ?: error("Missing exportKwh")
             val date = params["date"] ?: error("Missing date")
             val store = hubConfigStore ?: error("Hub config store not available")
-            store.saveBaseline(importKwh, exportKwh, date)
-            Log.i("CommandRouter", "Baseline saved: import=$importKwh export=$exportKwh date=$date")
+            val importT1 = params["importT1Kwh"]?.toDoubleOrNull() ?: 0.0
+            val importT2 = params["importT2Kwh"]?.toDoubleOrNull() ?: 0.0
+            val exportT1 = params["exportT1Kwh"]?.toDoubleOrNull() ?: 0.0
+            val exportT2 = params["exportT2Kwh"]?.toDoubleOrNull() ?: 0.0
+            store.saveBaseline(importKwh, exportKwh, date, importT1, importT2, exportT1, exportT2)
+            Log.i("CommandRouter", "Baseline saved: import=$importKwh export=$exportKwh date=$date T1imp=$importT1 T2imp=$importT2 T1exp=$exportT1 T2exp=$exportT2")
             CommandResult.Success(mapOf(
                 "baselineImportKwh" to importKwh,
                 "baselineExportKwh" to exportKwh,
+                "baselineImportT1Kwh" to importT1,
+                "baselineImportT2Kwh" to importT2,
+                "baselineExportT1Kwh" to exportT1,
+                "baselineExportT2Kwh" to exportT2,
                 "baselineDate" to date
             ))
         }
@@ -101,6 +109,10 @@ class CommandRouter(
             CommandResult.Success(mapOf(
                 "baselineImportKwh" to (config?.baselineImportKwh ?: 0.0),
                 "baselineExportKwh" to (config?.baselineExportKwh ?: 0.0),
+                "baselineImportT1Kwh" to (config?.baselineImportT1Kwh ?: 0.0),
+                "baselineImportT2Kwh" to (config?.baselineImportT2Kwh ?: 0.0),
+                "baselineExportT1Kwh" to (config?.baselineExportT1Kwh ?: 0.0),
+                "baselineExportT2Kwh" to (config?.baselineExportT2Kwh ?: 0.0),
                 "baselineDate" to (config?.baselineDate ?: "")
             ))
         }
@@ -152,9 +164,6 @@ class CommandRouter(
             val inverterPowerW = if (inverterFresh) {
                 com.homeassisthub.hub.controller.InverterLiveData.activePowerW
             } else 0.0
-            val cachedRealConsumptionW = if (inverterFresh) {
-                com.homeassisthub.hub.controller.InverterLiveData.realConsumptionW
-            } else 0.0
             val inverterDailyKwh = if (inverterFresh) {
                 com.homeassisthub.hub.controller.InverterLiveData.dailyEnergyKwh
             } else 0.0
@@ -203,7 +212,11 @@ class CommandRouter(
                         val histInverterPower = if (isLatest) inverterPowerW else findInverterPower(it.timestamp)
                         val hasInverterData = if (isLatest) inverterFresh else (histInverterPower > 0.0)
                         val realConsumptionW = if (isLatest) {
-                            if (inverterFresh) cachedRealConsumptionW else it.powerImportW
+                            if (inverterFresh) {
+                                maxOf(0.0, inverterPowerW + it.powerImportW - it.powerExportW)
+                            } else {
+                                it.powerImportW
+                            }
                         } else if (hasInverterData) {
                             maxOf(0.0, histInverterPower - it.powerExportW + it.powerImportW)
                         } else {
@@ -252,19 +265,43 @@ class CommandRouter(
                         val latest = com.homeassisthub.hub.controller.P1HistoryBuffer.latestSnapshot
                         val currentImportTotal = latest?.importTotalKwh ?: 0.0
                         val currentExportTotal = latest?.exportTotalKwh ?: 0.0
+                        val currentImportT1 = latest?.importT1Kwh ?: 0.0
+                        val currentImportT2 = latest?.importT2Kwh ?: 0.0
+                        val currentExportT1 = latest?.exportT1Kwh ?: 0.0
+                        val currentExportT2 = latest?.exportT2Kwh ?: 0.0
                         val bImport = config?.baselineImportKwh ?: 0.0
                         val bExport = config?.baselineExportKwh ?: 0.0
+                        val bImportT1 = config?.baselineImportT1Kwh ?: 0.0
+                        val bImportT2 = config?.baselineImportT2Kwh ?: 0.0
+                        val bExportT1 = config?.baselineExportT1Kwh ?: 0.0
+                        val bExportT2 = config?.baselineExportT2Kwh ?: 0.0
                         val bDate = config?.baselineDate ?: ""
                         val yearlyImport = if (bImport > 0.0) maxOf(0.0, currentImportTotal - bImport) else 0.0
                         val yearlyExport = if (bExport > 0.0) maxOf(0.0, currentExportTotal - bExport) else 0.0
+                        val yearlyImportT1 = if (bImportT1 > 0.0) maxOf(0.0, currentImportT1 - bImportT1) else 0.0
+                        val yearlyImportT2 = if (bImportT2 > 0.0) maxOf(0.0, currentImportT2 - bImportT2) else 0.0
+                        val yearlyExportT1 = if (bExportT1 > 0.0) maxOf(0.0, currentExportT1 - bExportT1) else 0.0
+                        val yearlyExportT2 = if (bExportT2 > 0.0) maxOf(0.0, currentExportT2 - bExportT2) else 0.0
                         mapOf(
                             "baselineImportKwh" to bImport,
                             "baselineExportKwh" to bExport,
+                            "baselineImportT1Kwh" to bImportT1,
+                            "baselineImportT2Kwh" to bImportT2,
+                            "baselineExportT1Kwh" to bExportT1,
+                            "baselineExportT2Kwh" to bExportT2,
                             "baselineDate" to bDate,
                             "currentImportTotalKwh" to currentImportTotal,
                             "currentExportTotalKwh" to currentExportTotal,
+                            "currentImportT1Kwh" to currentImportT1,
+                            "currentImportT2Kwh" to currentImportT2,
+                            "currentExportT1Kwh" to currentExportT1,
+                            "currentExportT2Kwh" to currentExportT2,
                             "yearlyImportKwh" to yearlyImport,
                             "yearlyExportKwh" to yearlyExport,
+                            "yearlyImportT1Kwh" to yearlyImportT1,
+                            "yearlyImportT2Kwh" to yearlyImportT2,
+                            "yearlyExportT1Kwh" to yearlyExportT1,
+                            "yearlyExportT2Kwh" to yearlyExportT2,
                             "yearlyBalanceKwh" to (yearlyImport - yearlyExport)
                         )
                     }

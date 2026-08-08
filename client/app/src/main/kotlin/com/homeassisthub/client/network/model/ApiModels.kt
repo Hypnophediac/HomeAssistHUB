@@ -66,7 +66,8 @@ data class EnergyHourlyDto(
     val consumedKwh: Double,
     val exportedKwh: Double,
     val peakImportKw: Double = 0.0,
-    val peakExportKw: Double = 0.0
+    val peakExportKw: Double = 0.0,
+    val producedKwh: Double = 0.0
 )
 
 @JsonClass(generateAdapter = true)
@@ -146,11 +147,23 @@ data class DailySummaryDto(
 data class BaselineData(
     val baselineImportKwh: Double = 0.0,
     val baselineExportKwh: Double = 0.0,
+    val baselineImportT1Kwh: Double = 0.0,
+    val baselineImportT2Kwh: Double = 0.0,
+    val baselineExportT1Kwh: Double = 0.0,
+    val baselineExportT2Kwh: Double = 0.0,
     val baselineDate: String = "",
     val currentImportTotalKwh: Double = 0.0,
     val currentExportTotalKwh: Double = 0.0,
+    val currentImportT1Kwh: Double = 0.0,
+    val currentImportT2Kwh: Double = 0.0,
+    val currentExportT1Kwh: Double = 0.0,
+    val currentExportT2Kwh: Double = 0.0,
     val yearlyImportKwh: Double = 0.0,
     val yearlyExportKwh: Double = 0.0,
+    val yearlyImportT1Kwh: Double = 0.0,
+    val yearlyImportT2Kwh: Double = 0.0,
+    val yearlyExportT1Kwh: Double = 0.0,
+    val yearlyExportT2Kwh: Double = 0.0,
     val yearlyBalanceKwh: Double = 0.0
 )
 

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.SolarPower
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -68,15 +69,22 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     var syncToken by remember { mutableStateOf(config.syncToken) }
     var kioskUrl by remember { mutableStateOf("") }
 
-    var latitude by remember { mutableStateOf(pvConfig.latitude?.toString() ?: "") }
-    var longitude by remember { mutableStateOf(pvConfig.longitude?.toString() ?: "") }
+    var locationName by remember { mutableStateOf(pvConfig.locationName) }
+    var selectedLat by remember { mutableStateOf(pvConfig.latitude) }
+    var selectedLon by remember { mutableStateOf(pvConfig.longitude) }
     var pvCapacityKwp by remember { mutableStateOf(pvConfig.pvCapacityKwp?.toString() ?: "") }
     var performanceRatioPercent by remember { mutableStateOf((pvConfig.performanceRatio * 100).toInt().toString()) }
+    val geocodingResults by viewModel.geocodingResults.collectAsState()
+    val isGeocoding by viewModel.isGeocoding.collectAsState()
 
     val baseline by viewModel.baseline.collectAsState()
 
     var baselineImport by remember { mutableStateOf("") }
     var baselineExport by remember { mutableStateOf("") }
+    var baselineImportT1 by remember { mutableStateOf("") }
+    var baselineImportT2 by remember { mutableStateOf("") }
+    var baselineExportT1 by remember { mutableStateOf("") }
+    var baselineExportT2 by remember { mutableStateOf("") }
     var baselineDate by remember { mutableStateOf("") }
 
     var deviceId by remember { mutableStateOf("") }
@@ -186,16 +194,28 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
 
         item {
             BaselineSettingsCard(
-                importKwh = baselineImport.ifBlank { baseline.first },
+                importKwh = baselineImport.ifBlank { baseline.importKwh },
                 onImportKwhChange = { baselineImport = it },
-                exportKwh = baselineExport.ifBlank { baseline.second },
+                exportKwh = baselineExport.ifBlank { baseline.exportKwh },
                 onExportKwhChange = { baselineExport = it },
-                date = baselineDate.ifBlank { baseline.third },
+                importT1 = baselineImportT1.ifBlank { baseline.importT1 },
+                onImportT1Change = { baselineImportT1 = it },
+                importT2 = baselineImportT2.ifBlank { baseline.importT2 },
+                onImportT2Change = { baselineImportT2 = it },
+                exportT1 = baselineExportT1.ifBlank { baseline.exportT1 },
+                onExportT1Change = { baselineExportT1 = it },
+                exportT2 = baselineExportT2.ifBlank { baseline.exportT2 },
+                onExportT2Change = { baselineExportT2 = it },
+                date = baselineDate.ifBlank { baseline.date },
                 onDateChange = { baselineDate = it },
                 onSave = { viewModel.saveBaseline(
-                    baselineImport.ifBlank { baseline.first },
-                    baselineExport.ifBlank { baseline.second },
-                    baselineDate.ifBlank { baseline.third }
+                    baselineImport.ifBlank { baseline.importKwh },
+                    baselineExport.ifBlank { baseline.exportKwh },
+                    baselineDate.ifBlank { baseline.date },
+                    baselineImportT1.ifBlank { baseline.importT1 },
+                    baselineImportT2.ifBlank { baseline.importT2 },
+                    baselineExportT1.ifBlank { baseline.exportT1 },
+                    baselineExportT2.ifBlank { baseline.exportT2 }
                 )},
                 onLoad = { viewModel.loadBaseline() }
             )
@@ -203,16 +223,25 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
 
         item {
             PvForecastCard(
-                latitude = latitude,
-                onLatitudeChange = { latitude = it },
-                longitude = longitude,
-                onLongitudeChange = { longitude = it },
+                locationName = locationName,
+                onLocationNameChange = { locationName = it },
+                selectedLat = selectedLat,
+                selectedLon = selectedLon,
                 pvCapacityKwp = pvCapacityKwp,
                 onPvCapacityKwpChange = { pvCapacityKwp = it },
                 performanceRatioPercent = performanceRatioPercent,
                 onPerformanceRatioPercentChange = { performanceRatioPercent = it },
+                geocodingResults = geocodingResults,
+                isGeocoding = isGeocoding,
+                onSearch = { viewModel.searchLocation(locationName) },
+                onSelectResult = { result ->
+                    locationName = result.name + (result.admin1?.let { ", $it" } ?: "") + (result.country?.let { ", $it" } ?: "")
+                    selectedLat = result.latitude
+                    selectedLon = result.longitude
+                    viewModel.clearGeocodingResults()
+                },
                 onSave = {
-                    viewModel.savePvForecastConfig(latitude, longitude, pvCapacityKwp, performanceRatioPercent)
+                    viewModel.savePvForecastConfig(locationName, selectedLat, selectedLon, pvCapacityKwp, performanceRatioPercent)
                 }
             )
         }
@@ -623,6 +652,14 @@ private fun BaselineSettingsCard(
     onImportKwhChange: (String) -> Unit,
     exportKwh: String,
     onExportKwhChange: (String) -> Unit,
+    importT1: String,
+    onImportT1Change: (String) -> Unit,
+    importT2: String,
+    onImportT2Change: (String) -> Unit,
+    exportT1: String,
+    onExportT1Change: (String) -> Unit,
+    exportT2: String,
+    onExportT2Change: (String) -> Unit,
     date: String,
     onDateChange: (String) -> Unit,
     onSave: () -> Unit,
@@ -631,28 +668,74 @@ private fun BaselineSettingsCard(
     SectionCard(icon = Icons.Filled.Save, title = "Elszámolási nyitóértékek (MVM)") {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "A P1 mérőóra kumulált állásai az utolsó hivatalos MVM leolvasás napján. Ezekből számolódik az éves vételezés/visszatáplálás az Energia fül Éves tabján.",
+                text = "A P1 mérőóra kumulált állásai az utolsó hivatalos MVM leolvasás napján. Ezekből számolódik az éves vételezés/visszatáplálás az Energia fül Éves tabján. A tarifánkénti (T1/T2) értékek opcionálisak.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             OutlinedTextField(
                 value = importKwh,
                 onValueChange = { onImportKwhChange(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
-                label = { Text("Nyitó vételezés (kWh)") },
+                label = { Text("Nyitó vételezés összesen (kWh)") },
                 placeholder = { Text("8779.0") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = importT1,
+                    onValueChange = { onImportT1Change(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
+                    label = { Text("Import T1 (nappal)") },
+                    placeholder = { Text("5000.0") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = importT2,
+                    onValueChange = { onImportT2Change(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
+                    label = { Text("Import T2 (éjszaka)") },
+                    placeholder = { Text("3779.0") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+            }
             OutlinedTextField(
                 value = exportKwh,
                 onValueChange = { onExportKwhChange(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
-                label = { Text("Nyitó visszatáplálás (kWh)") },
+                label = { Text("Nyitó visszatáplálás összesen (kWh)") },
                 placeholder = { Text("5000.0") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = exportT1,
+                    onValueChange = { onExportT1Change(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
+                    label = { Text("Export T1") },
+                    placeholder = { Text("3000.0") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = exportT2,
+                    onValueChange = { onExportT2Change(it.filter { c -> c.isDigit() || c == '.' || c == ',' }) },
+                    label = { Text("Export T2") },
+                    placeholder = { Text("2000.0") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+            }
             OutlinedTextField(
                 value = date,
                 onValueChange = { onDateChange(it) },
@@ -684,44 +767,101 @@ private fun BaselineSettingsCard(
 
 @Composable
 private fun PvForecastCard(
-    latitude: String,
-    onLatitudeChange: (String) -> Unit,
-    longitude: String,
-    onLongitudeChange: (String) -> Unit,
+    locationName: String,
+    onLocationNameChange: (String) -> Unit,
+    selectedLat: Double?,
+    selectedLon: Double?,
     pvCapacityKwp: String,
     onPvCapacityKwpChange: (String) -> Unit,
     performanceRatioPercent: String,
     onPerformanceRatioPercentChange: (String) -> Unit,
+    geocodingResults: List<com.homeassisthub.client.network.GeocodingService.GeocodingResult>,
+    isGeocoding: Boolean,
+    onSearch: () -> Unit,
+    onSelectResult: (com.homeassisthub.client.network.GeocodingService.GeocodingResult) -> Unit,
     onSave: () -> Unit
 ) {
     SectionCard(icon = Icons.Filled.WbSunny, title = "Napelem & Helyszín (Előrejelzés)") {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "A GPS koordináták és a napelem kapacitás szükséges az Energia fülön megjelenő időjárás-alapú termelési előrejelzéshez.",
+                text = "A helyszín és a napelem kapacitás szükséges az Energia fülön megjelenő időjárás-alapú termelési előrejelzéshez.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
             ) {
                 OutlinedTextField(
-                    value = latitude,
-                    onValueChange = onLatitudeChange,
-                    label = { Text("Szélesség") },
-                    placeholder = { Text("47.4979") },
+                    value = locationName,
+                    onValueChange = onLocationNameChange,
+                    label = { Text("Helyszín") },
+                    placeholder = { Text("pl. Budapest, Debrecen, Győr") },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
                 )
-                OutlinedTextField(
-                    value = longitude,
-                    onValueChange = onLongitudeChange,
-                    label = { Text("Hosszúság") },
-                    placeholder = { Text("19.0402") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                FilledTonalButton(
+                    onClick = onSearch,
+                    enabled = locationName.isNotBlank() && !isGeocoding,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    if (isGeocoding) {
+                        Text("...")
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Keresés")
+                    }
+                }
+            }
+            if (geocodingResults.isNotEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                            text = "Válassz helyszínt:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        geocodingResults.forEach { result ->
+                            TextButton(
+                                onClick = { onSelectResult(result) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Text(
+                                        text = result.name + (result.admin1?.let { ", $it" } ?: ""),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = (result.country ?: "") + "  (${String.format("%.4f", result.latitude)}, ${String.format("%.4f", result.longitude)})",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (selectedLat != null && selectedLon != null) {
+                Text(
+                    text = "Kiválasztott: ${String.format("%.4f", selectedLat)}, ${String.format("%.4f", selectedLon)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Row(
@@ -749,6 +889,7 @@ private fun PvForecastCard(
             }
             Button(
                 onClick = onSave,
+                enabled = selectedLat != null && selectedLon != null && pvCapacityKwp.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(

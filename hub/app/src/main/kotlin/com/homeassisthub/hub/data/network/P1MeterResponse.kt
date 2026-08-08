@@ -120,51 +120,106 @@ data class P1MeterResponse(
     // from V×Bl×PF and determine direction from total import/export:
     // - If totalImport=0: ALL phases export (exportLx = V×Bl×PF, importLx = 0)
     // - If totalExport=0: ALL phases import (importLx = V×Bl×PF, exportLx = 0)
-    // - If both>0 (mixed): proportional split per phase
-    private fun phasePower(lx: Int): Pair<Double, Double> {
-        val rawImp = when (lx) {
-            1 -> (powerImportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-            2 -> (powerImportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-            else -> (powerImportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        }
-        val rawExp = when (lx) {
-            1 -> (powerExportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-            2 -> (powerExportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-            else -> (powerExportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
-        }
-        if (rawImp > 0.0 || rawExp > 0.0) return rawImp to rawExp
+    // - If both>0 (mixed): brute-force 2^3 assignment for phases with current,
+    //   then distribute remaining export/import equally among zero-current phases
+    //   (the inverter is symmetrical, so export happens on all phases even if
+    //   the meter can't measure the small current below its resolution).
 
-        val v = when (lx) { 1 -> l1V; 2 -> l2V; else -> l3V }
-        val bl = when (lx) { 1 -> bl1A; 2 -> bl2A; else -> bl3A }
-        val pf = when (lx) { 1 -> powerFactorL1; 2 -> powerFactorL2; else -> powerFactorL3 }
-        val p = v * bl * pf
-        if (p <= 0.0) return 0.0 to 0.0
-
+    private fun computeAllPhasePowers(): Array<Pair<Double, Double>> {
         val totalImp = powerImportW
         val totalExp = powerExportW
 
-        if (totalImp <= 0.0 && totalExp > 0.0) {
-            // All phases export
-            return 0.0 to p
+        // Check if meter provides per-phase values directly
+        val rawImp = doubleArrayOf(
+            (powerImportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0,
+            (powerImportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0,
+            (powerImportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        )
+        val rawExp = doubleArrayOf(
+            (powerExportL1KwStr.toDoubleOrNull() ?: 0.0) * 1000.0,
+            (powerExportL2KwStr.toDoubleOrNull() ?: 0.0) * 1000.0,
+            (powerExportL3KwStr.toDoubleOrNull() ?: 0.0) * 1000.0
+        )
+        if (rawImp.any { it > 0.0 } || rawExp.any { it > 0.0 }) {
+            return arrayOf(
+                rawImp[0] to rawExp[0],
+                rawImp[1] to rawExp[1],
+                rawImp[2] to rawExp[2]
+            )
         }
-        if (totalExp <= 0.0 && totalImp > 0.0) {
-            // All phases import
-            return p to 0.0
-        }
+
+        // Compute V×Bl×PF for each phase
+        val voltages = doubleArrayOf(l1V, l2V, l3V)
+        val currents = doubleArrayOf(bl1A, bl2A, bl3A)
+        val pfs = doubleArrayOf(powerFactorL1, powerFactorL2, powerFactorL3)
+        val phases = DoubleArray(3) { i -> voltages[i] * currents[i] * pfs[i] }
+
         if (totalImp <= 0.0 && totalExp <= 0.0) {
-            return 0.0 to 0.0
+            return arrayOf(0.0 to 0.0, 0.0 to 0.0, 0.0 to 0.0)
         }
-        // Mixed: each phase is EITHER importing OR exporting, not both.
-        // Brute-force all 8 assignments (2^3 phases) and pick the one where
-        // sum(import phases) best matches totalImp and sum(export phases) best matches totalExp.
-        val p1 = l1V * bl1A * powerFactorL1
-        val p2 = l2V * bl2A * powerFactorL2
-        val p3 = l3V * bl3A * powerFactorL3
-        val phases = doubleArrayOf(p1, p2, p3)
-        if (phases.all { it <= 0.0 }) return 0.0 to 0.0
+
+        // All phases export
+        if (totalImp <= 0.0 && totalExp > 0.0) {
+            val result = Array(3) { 0.0 to 0.0 }
+            val hasPower = phases.any { it > 0.0 }
+            if (hasPower) {
+                val scale = totalExp / phases.filter { it > 0.0 }.sum()
+                for (i in 0..2) {
+                    result[i] = if (phases[i] > 0.0) 0.0 to (phases[i] * scale) else 0.0 to 0.0
+                }
+                // Distribute remaining export among zero-current phases
+                val usedExport = result.sumOf { it.second }
+                val remaining = totalExp - usedExport
+                val zeroCount = phases.count { it <= 0.0 }
+                if (remaining > 0.0 && zeroCount > 0) {
+                    val perPhase = remaining / zeroCount
+                    for (i in 0..2) {
+                        if (phases[i] <= 0.0) result[i] = 0.0 to perPhase
+                    }
+                }
+            } else {
+                // All phases have 0 current — distribute equally
+                val perPhase = totalExp / 3.0
+                return arrayOf(0.0 to perPhase, 0.0 to perPhase, 0.0 to perPhase)
+            }
+            return result
+        }
+
+        // All phases import
+        if (totalExp <= 0.0 && totalImp > 0.0) {
+            val result = Array(3) { 0.0 to 0.0 }
+            val hasPower = phases.any { it > 0.0 }
+            if (hasPower) {
+                val scale = totalImp / phases.filter { it > 0.0 }.sum()
+                for (i in 0..2) {
+                    result[i] = if (phases[i] > 0.0) (phases[i] * scale) to 0.0 else 0.0 to 0.0
+                }
+                // Distribute remaining import among zero-current phases
+                val usedImport = result.sumOf { it.first }
+                val remaining = totalImp - usedImport
+                val zeroCount = phases.count { it <= 0.0 }
+                if (remaining > 0.0 && zeroCount > 0) {
+                    val perPhase = remaining / zeroCount
+                    for (i in 0..2) {
+                        if (phases[i] <= 0.0) result[i] = perPhase to 0.0
+                    }
+                }
+            } else {
+                val perPhase = totalImp / 3.0
+                return arrayOf(perPhase to 0.0, perPhase to 0.0, perPhase to 0.0)
+            }
+            return result
+        }
+
+        // Mixed: some phases import, some export
+        // Brute-force assignment for phases with measurable current
+        if (phases.all { it <= 0.0 }) {
+            // No measurable current on any phase — can't determine direction
+            return arrayOf(0.0 to 0.0, 0.0 to 0.0, 0.0 to 0.0)
+        }
 
         var bestErr = Double.MAX_VALUE
-        var bestAssignment = intArrayOf(0, 0, 0) // 0=import, 1=export per phase
+        var bestAssignment = intArrayOf(0, 0, 0)
         for (mask in 0..7) {
             var impSum = 0.0
             var expSum = 0.0
@@ -172,11 +227,9 @@ data class P1MeterResponse(
                 if (phases[pi] <= 0.0) continue
                 if ((mask shr pi) and 1 == 0) impSum += phases[pi] else expSum += phases[pi]
             }
-            // Scale to match totals
             val impScale = if (impSum > 0.0) totalImp / impSum else 0.0
             val expScale = if (expSum > 0.0) totalExp / expSum else 0.0
             val err = kotlin.math.abs(impSum * impScale - totalImp) + kotlin.math.abs(expSum * expScale - totalExp)
-            // Prefer assignments where impSum/expSum are close to totals before scaling
             val rawErr = kotlin.math.abs(impSum - totalImp) + kotlin.math.abs(expSum - totalExp)
             val combinedErr = rawErr + err * 0.01
             if (combinedErr < bestErr) {
@@ -185,23 +238,50 @@ data class P1MeterResponse(
             }
         }
 
-        val phaseIdx = lx - 1
-        val isExport = bestAssignment[phaseIdx] == 1
-        val impScale = if (bestAssignment.count { it == 0 } > 0) {
-            val impSum = phases.filterIndexed { i, _ -> bestAssignment[i] == 0 }.sum()
-            if (impSum > 0.0) totalImp / impSum else 0.0
-        } else 0.0
-        val expScale = if (bestAssignment.count { it == 1 } > 0) {
-            val expSum = phases.filterIndexed { i, _ -> bestAssignment[i] == 1 }.sum()
-            if (expSum > 0.0) totalExp / expSum else 0.0
-        } else 0.0
+        // Compute scaled values for phases with current
+        val impSumAssigned = phases.filterIndexed { i, _ -> bestAssignment[i] == 0 && phases[i] > 0.0 }.sum()
+        val expSumAssigned = phases.filterIndexed { i, _ -> bestAssignment[i] == 1 && phases[i] > 0.0 }.sum()
+        val impScale = if (impSumAssigned > 0.0) totalImp / impSumAssigned else 0.0
+        val expScale = if (expSumAssigned > 0.0) totalExp / expSumAssigned else 0.0
 
-        return if (isExport) {
-            0.0 to (p * expScale)
-        } else {
-            (p * impScale) to 0.0
+        val result = Array(3) { 0.0 to 0.0 }
+        for (i in 0..2) {
+            if (phases[i] <= 0.0) continue
+            if (bestAssignment[i] == 0) {
+                result[i] = (phases[i] * impScale) to 0.0
+            } else {
+                result[i] = 0.0 to (phases[i] * expScale)
+            }
         }
+
+        // Distribute remaining export among zero-current phases
+        val usedExport = result.sumOf { it.second }
+        val remainingExport = totalExp - usedExport
+        val zeroCount = phases.count { it <= 0.0 }
+        if (remainingExport > 0.0 && zeroCount > 0) {
+            val perPhase = remainingExport / zeroCount
+            for (i in 0..2) {
+                if (phases[i] <= 0.0) result[i] = 0.0 to perPhase
+            }
+        }
+
+        // Distribute remaining import among zero-current phases (if no export was assigned)
+        val usedImport = result.sumOf { it.first }
+        val remainingImport = totalImp - usedImport
+        if (remainingImport > 0.0 && zeroCount > 0) {
+            val zeroPhasesWithoutExport = phases.indices.filter { phases[it] <= 0.0 && result[it].second <= 0.0 }
+            if (zeroPhasesWithoutExport.isNotEmpty()) {
+                val perPhase = remainingImport / zeroPhasesWithoutExport.size
+                for (i in zeroPhasesWithoutExport) {
+                    result[i] = perPhase to 0.0
+                }
+            }
+        }
+
+        return result
     }
+
+    private fun phasePower(lx: Int): Pair<Double, Double> = computeAllPhasePowers()[lx - 1]
 
     val powerImportL1W: Double get() = phasePower(1).first
     val powerImportL2W: Double get() = phasePower(2).first

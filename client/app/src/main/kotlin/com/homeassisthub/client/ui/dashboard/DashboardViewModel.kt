@@ -86,11 +86,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     _baseline.value = BaselineData(
                         baselineImportKwh = baselineObj.optDouble("baselineImportKwh", 0.0),
                         baselineExportKwh = baselineObj.optDouble("baselineExportKwh", 0.0),
+                        baselineImportT1Kwh = baselineObj.optDouble("baselineImportT1Kwh", 0.0),
+                        baselineImportT2Kwh = baselineObj.optDouble("baselineImportT2Kwh", 0.0),
+                        baselineExportT1Kwh = baselineObj.optDouble("baselineExportT1Kwh", 0.0),
+                        baselineExportT2Kwh = baselineObj.optDouble("baselineExportT2Kwh", 0.0),
                         baselineDate = baselineObj.optString("baselineDate", ""),
                         currentImportTotalKwh = baselineObj.optDouble("currentImportTotalKwh", 0.0),
                         currentExportTotalKwh = baselineObj.optDouble("currentExportTotalKwh", 0.0),
+                        currentImportT1Kwh = baselineObj.optDouble("currentImportT1Kwh", 0.0),
+                        currentImportT2Kwh = baselineObj.optDouble("currentImportT2Kwh", 0.0),
+                        currentExportT1Kwh = baselineObj.optDouble("currentExportT1Kwh", 0.0),
+                        currentExportT2Kwh = baselineObj.optDouble("currentExportT2Kwh", 0.0),
                         yearlyImportKwh = baselineObj.optDouble("yearlyImportKwh", 0.0),
                         yearlyExportKwh = baselineObj.optDouble("yearlyExportKwh", 0.0),
+                        yearlyImportT1Kwh = baselineObj.optDouble("yearlyImportT1Kwh", 0.0),
+                        yearlyImportT2Kwh = baselineObj.optDouble("yearlyImportT2Kwh", 0.0),
+                        yearlyExportT1Kwh = baselineObj.optDouble("yearlyExportT1Kwh", 0.0),
+                        yearlyExportT2Kwh = baselineObj.optDouble("yearlyExportT2Kwh", 0.0),
                         yearlyBalanceKwh = baselineObj.optDouble("yearlyBalanceKwh", 0.0)
                     )
                 }

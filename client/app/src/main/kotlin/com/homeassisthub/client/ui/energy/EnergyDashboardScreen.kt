@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Fullscreen
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.SolarPower
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -125,7 +127,8 @@ fun EnergyDashboardScreen(viewModel: EnergyViewModel = viewModel()) {
         item {
             ForecastCard(
                 forecast = pvForecast,
-                actualTodayKwh = liveDailySummary?.inverterDailyKwh
+                actualTodayKwh = liveDailySummary?.inverterDailyKwh,
+                actualHourlyProduced = dailyData?.hourly?.associate { it.hour to it.producedKwh }
             )
         }
 
@@ -438,7 +441,8 @@ private fun FlowCard(
 @Composable
 private fun ForecastCard(
     forecast: com.homeassisthub.client.data.PvForecastResult?,
-    actualTodayKwh: Double?
+    actualTodayKwh: Double?,
+    actualHourlyProduced: Map<Int, Double>?
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -495,6 +499,19 @@ private fun ForecastCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (forecast.hourlyEstimates.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Óránkénti előrejelzés (kWh)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ForecastHourlyChart(
+                        hourlyEstimates = forecast.hourlyEstimates,
+                        actualHourlyProduced = actualHourlyProduced ?: emptyMap()
+                    )
+                }
             }
         }
     }
@@ -579,6 +596,193 @@ private fun BaselineCard(baseline: BaselineData?) {
                 modifier = Modifier.fillMaxWidth(),
                 title = "Jelenlegi óraállás (exp)",
                 value = "%.1f kWh".format(baseline.currentExportTotalKwh)
+            )
+            if (baseline.yearlyImportT1Kwh > 0.0 || baseline.yearlyImportT2Kwh > 0.0 ||
+                baseline.yearlyExportT1Kwh > 0.0 || baseline.yearlyExportT2Kwh > 0.0) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Tarifánkénti bontás",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LiveStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Import T1 (nappal)",
+                        value = formatKwh(baseline.yearlyImportT1Kwh)
+                    )
+                    LiveStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Import T2 (éjszaka)",
+                        value = formatKwh(baseline.yearlyImportT2Kwh)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LiveStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Export T1",
+                        value = formatKwh(baseline.yearlyExportT1Kwh)
+                    )
+                    LiveStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Export T2",
+                        value = formatKwh(baseline.yearlyExportT2Kwh)
+                    )
+                }
+            }
+            // ── MVM Év Végi Számla Becslő ──
+            val baselineDate = baseline.baselineDate
+            if (baselineDate.isNotBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                YearlyBillPredictor(baseline)
+            }
+        }
+    }
+}
+
+@Composable
+private fun YearlyBillPredictor(baseline: BaselineData) {
+    val today = java.util.Calendar.getInstance()
+    val baselineCal = java.util.Calendar.getInstance()
+    runCatching {
+        val parts = baseline.baselineDate.split("-")
+        baselineCal.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
+    }
+    val elapsedDays = ((today.timeInMillis - baselineCal.timeInMillis) / (24 * 60 * 60 * 1000L)).coerceAtLeast(1L)
+    val dayOfYear = today.get(java.util.Calendar.DAY_OF_YEAR)
+    val yearEnd = if (today.get(java.util.Calendar.YEAR) % 4 == 0) 366 else 365
+    val remainingDays = (yearEnd - dayOfYear).coerceAtLeast(0).toLong()
+
+    val dailyImportAvg = baseline.yearlyImportKwh / elapsedDays
+    val dailyExportAvg = baseline.yearlyExportKwh / elapsedDays
+
+    // Seasonal adjustment: remaining days are weighted by month.
+    // Winter (Nov-Feb): solar production ~30% of yearly average.
+    // Summer (May-Aug): solar production ~170% of yearly average.
+    // Import is roughly inverse (more heating in winter, less in summer).
+    val month = today.get(java.util.Calendar.MONTH) + 1
+    val seasonalExportFactor = when (month) {
+        11, 12, 1, 2 -> 0.3
+        3, 4 -> 0.7
+        5, 6, 7, 8 -> 1.7
+        9, 10 -> 1.0
+        else -> 1.0
+    }
+    val seasonalImportFactor = when (month) {
+        11, 12, 1, 2 -> 1.3
+        3, 4 -> 1.1
+        5, 6, 7, 8 -> 0.6
+        9, 10 -> 0.9
+        else -> 1.0
+    }
+
+    val projectedRemainingImport = dailyImportAvg * remainingDays * seasonalImportFactor
+    val projectedRemainingExport = dailyExportAvg * remainingDays * seasonalExportFactor
+    val projectedTotalImport = baseline.yearlyImportKwh + projectedRemainingImport
+    val projectedTotalExport = baseline.yearlyExportKwh + projectedRemainingExport
+    val projectedBalance = projectedTotalImport - projectedTotalExport
+
+    // MVM pricing assumptions (2026):
+    // Import: ~47 Ft/kWh (average T1/T2 with taxes)
+    // Export: ~28 Ft/kWh (betáplálási tarifa)
+    val importPriceFt = 47.0
+    val exportPriceFt = 28.0
+    val estimatedCostFt = projectedTotalImport * importPriceFt - projectedTotalExport * exportPriceFt
+
+    // Célfogyasztás: mennyi kWh/nap maradhat a 0 Ft számlához
+    val targetDailyImport = if (remainingDays > 0) {
+        (projectedTotalExport * exportPriceFt / importPriceFt - baseline.yearlyImportKwh) / remainingDays
+    } else 0.0
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = Icons.Filled.AccountBalanceWallet,
+            contentDescription = null,
+            tint = Color(0xFF10B981),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Év végi becslés",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = "Az eddigi átlag + szezonalitás alapján (téli/nyári tényezővel).",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        LiveStatCard(
+            modifier = Modifier.weight(1f),
+            title = "Becsült év végi szaldó",
+            value = formatKwh(projectedBalance)
+        )
+        LiveStatCard(
+            modifier = Modifier.weight(1f),
+            title = "Becsült költség",
+            value = "%,.0f Ft".format(estimatedCostFt)
+        )
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        LiveStatCard(
+            modifier = Modifier.weight(1f),
+            title = "Becsült éves imp.",
+            value = formatKwh(projectedTotalImport)
+        )
+        LiveStatCard(
+            modifier = Modifier.weight(1f),
+            title = "Becsült éves exp.",
+            value = formatKwh(projectedTotalExport)
+        )
+    }
+    if (remainingDays > 0 && targetDailyImport > 0) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xFF10B981).copy(alpha = 0.1f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = "Célfogyasztás: ha naponta max %.1f kWh-t fogyasztasz a év hátralévő %d napján, 0 Ft lesz az év végi számlád.".format(targetDailyImport, remainingDays),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF065F46),
+                modifier = Modifier.padding(12.dp)
+            )
+        }
+    } else if (remainingDays > 0 && projectedBalance < 0) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xFF10B981).copy(alpha = 0.1f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = "Jó úton jársz! A jelenlegi trend alapján visszajáró lehet az év végi számla.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF065F46),
+                modifier = Modifier.padding(12.dp)
             )
         }
     }
@@ -1170,6 +1374,132 @@ private fun LoadingPlaceholder() {
                 text = "Adatok betöltése...",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ForecastHourlyChart(
+    hourlyEstimates: List<com.homeassisthub.client.data.HourlyEstimate>,
+    actualHourlyProduced: Map<Int, Double>
+) {
+    val actualColor = Color(0xFF10B981)
+    val forecastColor = Color(0xFFF59E0B)
+    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val labelFontSizePx = with(density) { 9.sp.toPx() }
+    val yLabelWidthPx = with(density) { 36.dp.toPx() }
+    val xLabelHeightPx = with(density) { 14.dp.toPx() }
+
+    val maxForecast = hourlyEstimates.maxOfOrNull { it.kwh } ?: 0.0
+    val maxActual = actualHourlyProduced.values.maxOrNull() ?: 0.0
+    val maxKwh = maxOf(maxForecast, maxActual)
+    val niceMax = if (maxKwh <= 0.0) 1.0f else {
+        val mag = Math.pow(10.0, Math.floor(Math.log10(maxKwh))).toFloat()
+        val norm = (maxKwh / mag).toFloat()
+        val niceNorm = when {
+            norm <= 1.0 -> 1.0f
+            norm <= 2.0 -> 2.0f
+            norm <= 5.0 -> 5.0f
+            else -> 10.0f
+        }
+        niceNorm * mag
+    }
+
+    val chartHeight = 160.dp
+
+    androidx.compose.foundation.Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(chartHeight)
+    ) {
+        val w = size.width
+        val h = size.height
+        val plotLeft = yLabelWidthPx
+        val plotBottom = h - xLabelHeightPx
+        val plotTop = 0f
+        val plotW = w - plotLeft
+        val plotH = plotBottom - plotTop
+
+        // Y-axis grid lines + labels (4 steps)
+        val steps = 4
+        for (i in 0..steps) {
+            val y = plotBottom - (plotH * i / steps)
+            drawLine(
+                color = axisColor.copy(alpha = if (i == 0) 0.6f else 0.15f),
+                start = Offset(plotLeft, y),
+                end = Offset(w, y),
+                strokeWidth = 1f
+            )
+            val value = niceMax * i / steps
+            drawContext.canvas.nativeCanvas.drawText(
+                "%.1f".format(value),
+                0f,
+                y + labelFontSizePx / 3,
+                android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = labelFontSizePx
+                    textAlign = android.graphics.Paint.Align.LEFT
+                }
+            )
+        }
+
+        // Bars: two bars per hour slot (actual + forecast)
+        val barCount = hourlyEstimates.size
+        if (barCount == 0) return@Canvas
+        val barSlot = plotW / barCount
+        val barWidth = barSlot * 0.3f
+        val gapBetween = barSlot * 0.06f
+        val pairWidth = barWidth * 2 + gapBetween
+        val pairOffset = (barSlot - pairWidth) / 2
+
+        hourlyEstimates.forEachIndexed { i, est ->
+            val slotStart = plotLeft + i * barSlot + pairOffset
+            val actualKwh = actualHourlyProduced[est.hour] ?: 0.0
+
+            // Actual bar (green)
+            if (actualKwh > 0.0) {
+                val barH = (actualKwh.toFloat() / niceMax) * plotH
+                val x = slotStart
+                val y = plotBottom - barH
+                drawRoundRect(
+                    color = actualColor,
+                    topLeft = Offset(x, y),
+                    size = Size(barWidth, barH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 4, barWidth / 4)
+                )
+            }
+
+            // Forecast bar (yellow)
+            if (est.kwh > 0.0) {
+                val barH = (est.kwh.toFloat() / niceMax) * plotH
+                val x = slotStart + barWidth + gapBetween
+                val y = plotBottom - barH
+                drawRoundRect(
+                    color = forecastColor,
+                    topLeft = Offset(x, y),
+                    size = Size(barWidth, barH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 4, barWidth / 4)
+                )
+            }
+        }
+
+        // X-axis labels (every 3 hours)
+        val labelInterval = if (barCount > 24) 6 else 3
+        hourlyEstimates.forEachIndexed { i, est ->
+            if (i % labelInterval != 0 && i != barCount - 1) return@forEachIndexed
+            val x = plotLeft + i * barSlot + barSlot / 2
+            drawContext.canvas.nativeCanvas.drawText(
+                "%02d".format(est.hour),
+                x,
+                h - 2f,
+                android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = labelFontSizePx
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
             )
         }
     }

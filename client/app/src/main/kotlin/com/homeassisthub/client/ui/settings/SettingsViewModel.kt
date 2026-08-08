@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.homeassisthub.client.data.ClientConfig
 import com.homeassisthub.client.data.ClientConfigStore
 import com.homeassisthub.client.data.PvForecastConfig
+import com.homeassisthub.client.network.GeocodingService
 import com.homeassisthub.client.network.JsonParsing
 import com.homeassisthub.client.network.SocketIoManager
 import com.homeassisthub.client.network.model.DeviceCredentialSummaryDto
@@ -27,6 +28,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     )
 
     val pvForecastConfig = mutableStateOf(configStore.getPvForecastConfig())
+
+    private val _geocodingResults = MutableStateFlow<List<GeocodingService.GeocodingResult>>(emptyList())
+    val geocodingResults: StateFlow<List<GeocodingService.GeocodingResult>> = _geocodingResults.asStateFlow()
+
+    private val _isGeocoding = MutableStateFlow(false)
+    val isGeocoding: StateFlow<Boolean> = _isGeocoding.asStateFlow()
 
     private val _discovered = MutableStateFlow<List<DiscoveredDeviceDto>>(emptyList())
     val discovered: StateFlow<List<DiscoveredDeviceDto>> = _discovered.asStateFlow()
@@ -54,15 +61,33 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         loadSavedDevices()
     }
 
-    fun savePvForecastConfig(latitude: String, longitude: String, pvCapacityKwp: String, performanceRatioPercent: String) {
+    fun searchLocation(query: String) {
+        viewModelScope.launch {
+            _isGeocoding.value = true
+            val results = GeocodingService.search(query)
+            _geocodingResults.value = results
+            _isGeocoding.value = false
+            if (results.isEmpty()) {
+                _statusMessage.value = "Nem található helyszín: '$query'"
+            }
+        }
+    }
+
+    fun clearGeocodingResults() {
+        _geocodingResults.value = emptyList()
+    }
+
+    fun savePvForecastConfig(locationName: String, latitude: Double?, longitude: Double?, pvCapacityKwp: String, performanceRatioPercent: String) {
         val newConfig = PvForecastConfig(
-            latitude = latitude.replace(",", ".").toDoubleOrNull(),
-            longitude = longitude.replace(",", ".").toDoubleOrNull(),
+            latitude = latitude,
+            longitude = longitude,
             pvCapacityKwp = pvCapacityKwp.replace(",", ".").toDoubleOrNull(),
-            performanceRatio = (performanceRatioPercent.replace(",", ".").toDoubleOrNull() ?: 80.0) / 100.0
+            performanceRatio = (performanceRatioPercent.replace(",", ".").toDoubleOrNull() ?: 80.0) / 100.0,
+            locationName = locationName
         )
         configStore.savePvForecastConfig(newConfig)
         pvForecastConfig.value = newConfig
+        _geocodingResults.value = emptyList()
         _statusMessage.value = "Napelem beállítások elmentve."
     }
 
@@ -196,8 +221,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private val _baseline = MutableStateFlow<Triple<String, String, String>>(Triple("", "", ""))
-    val baseline: StateFlow<Triple<String, String, String>> = _baseline.asStateFlow()
+    data class BaselineState(
+        val importKwh: String = "",
+        val exportKwh: String = "",
+        val date: String = "",
+        val importT1: String = "",
+        val importT2: String = "",
+        val exportT1: String = "",
+        val exportT2: String = ""
+    )
+
+    private val _baseline = MutableStateFlow(BaselineState())
+    val baseline: StateFlow<BaselineState> = _baseline.asStateFlow()
 
     fun loadBaseline() {
         viewModelScope.launch {
@@ -208,16 +243,24 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 val response = retryCommand(manager, "hub", "get_baseline")
                 if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
                 val data = response.optJSONObject("data")
-                _baseline.value = Triple(
-                    data?.optDouble("baselineImportKwh", 0.0)?.toString() ?: "",
-                    data?.optDouble("baselineExportKwh", 0.0)?.toString() ?: "",
-                    data?.optString("baselineDate", "") ?: ""
+                _baseline.value = BaselineState(
+                    importKwh = data?.optDouble("baselineImportKwh", 0.0)?.toString() ?: "",
+                    exportKwh = data?.optDouble("baselineExportKwh", 0.0)?.toString() ?: "",
+                    date = data?.optString("baselineDate", "") ?: "",
+                    importT1 = data?.optDouble("baselineImportT1Kwh", 0.0)?.let { if (it == 0.0) "" else it.toString() } ?: "",
+                    importT2 = data?.optDouble("baselineImportT2Kwh", 0.0)?.let { if (it == 0.0) "" else it.toString() } ?: "",
+                    exportT1 = data?.optDouble("baselineExportT1Kwh", 0.0)?.let { if (it == 0.0) "" else it.toString() } ?: "",
+                    exportT2 = data?.optDouble("baselineExportT2Kwh", 0.0)?.let { if (it == 0.0) "" else it.toString() } ?: ""
                 )
             }.onFailure { _statusMessage.value = "Baseline lekérdezési hiba: ${it.message}" }
         }
     }
 
-    fun saveBaseline(importKwh: String, exportKwh: String, date: String) {
+    fun saveBaseline(
+        importKwh: String, exportKwh: String, date: String,
+        importT1: String = "", importT2: String = "",
+        exportT1: String = "", exportT2: String = ""
+    ) {
         viewModelScope.launch {
             val cfg = config.value
             if (cfg.relayUrl.isBlank() || cfg.homeId.isBlank()) {
@@ -225,15 +268,20 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 return@launch
             }
             val manager = ensureSocketConnected(cfg)
+            val params = mutableMapOf(
+                "importKwh" to importKwh.replace(",", "."),
+                "exportKwh" to exportKwh.replace(",", "."),
+                "date" to date
+            )
+            if (importT1.isNotBlank()) params["importT1Kwh"] = importT1.replace(",", ".")
+            if (importT2.isNotBlank()) params["importT2Kwh"] = importT2.replace(",", ".")
+            if (exportT1.isNotBlank()) params["exportT1Kwh"] = exportT1.replace(",", ".")
+            if (exportT2.isNotBlank()) params["exportT2Kwh"] = exportT2.replace(",", ".")
             runCatching {
-                val response = retryCommand(manager, "hub", "save_baseline", mapOf(
-                    "importKwh" to importKwh.replace(",", "."),
-                    "exportKwh" to exportKwh.replace(",", "."),
-                    "date" to date
-                ))
+                val response = retryCommand(manager, "hub", "save_baseline", params)
                 if (!response.optBoolean("success")) error(response.optString("error", "Unknown error"))
                 _statusMessage.value = "Elszámolási nyitóértékek elmentve!"
-                _baseline.value = Triple(importKwh, exportKwh, date)
+                _baseline.value = BaselineState(importKwh, exportKwh, date, importT1, importT2, exportT1, exportT2)
             }.onFailure { _statusMessage.value = "Baseline mentési hiba: ${it.message}" }
         }
     }

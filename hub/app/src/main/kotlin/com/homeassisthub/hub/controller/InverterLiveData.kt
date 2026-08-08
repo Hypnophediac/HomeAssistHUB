@@ -19,7 +19,10 @@ object InverterLiveData {
     var lastUpdateMs: Long = 0L
         private set
 
-    /** Cached house consumption computed from synchronized P1 (T-5min) + inverter data. */
+    /** Cached house consumption computed from synchronized P1 (T-5min) + inverter data.
+     *  Smoothed with an exponential moving average (alpha=0.3) to suppress spikes
+     *  caused by rapid solar changes when the 5-min Kiosk delay doesn't match
+     *  the real-time P1 reading. Clamped to >= 0. */
     @Volatile
     var realConsumptionW: Double = 0.0
         private set
@@ -29,14 +32,27 @@ object InverterLiveData {
     var dailyEnergyKwh: Double = 0.0
         private set
 
+    private const val EMA_ALPHA = 0.5
+    private const val EMA_JUMP_THRESHOLD = 200.0
+
     fun update(powerW: Double) {
         activePowerW = powerW
         lastUpdateMs = System.currentTimeMillis()
     }
 
-    /** Called by [HuaweiCloudScraper] after computing synchronized house consumption. */
+    /** Called by [HuaweiCloudScraper] after computing synchronized house consumption.
+     *  Applies EMA smoothing and clamps to >= 0 to avoid negative spikes.
+     *  If the new value differs from the EMA by more than [EMA_JUMP_THRESHOLD],
+     *  jumps directly to the new value for fast convergence (e.g. after restart). */
     fun updateRealConsumption(consumptionW: Double, dailyKwh: Double) {
-        realConsumptionW = consumptionW
+        val clamped = maxOf(0.0, consumptionW)
+        realConsumptionW = if (realConsumptionW <= 0.0) {
+            clamped
+        } else if (kotlin.math.abs(clamped - realConsumptionW) > EMA_JUMP_THRESHOLD) {
+            clamped
+        } else {
+            EMA_ALPHA * clamped + (1.0 - EMA_ALPHA) * realConsumptionW
+        }
         dailyEnergyKwh = dailyKwh
     }
 

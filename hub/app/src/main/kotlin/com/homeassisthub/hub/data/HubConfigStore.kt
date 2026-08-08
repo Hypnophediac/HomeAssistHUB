@@ -9,6 +9,10 @@ data class HubConfig(
     val syncToken: String = "",
     val baselineImportKwh: Double = 0.0,
     val baselineExportKwh: Double = 0.0,
+    val baselineImportT1Kwh: Double = 0.0,
+    val baselineImportT2Kwh: Double = 0.0,
+    val baselineExportT1Kwh: Double = 0.0,
+    val baselineExportT2Kwh: Double = 0.0,
     val baselineDate: String = ""
 )
 
@@ -28,8 +32,12 @@ class HubConfigStore(context: Context) {
         val syncToken = prefs.getString(KEY_SYNC_TOKEN, "") ?: ""
         val baselineImport = prefs.getFloat(KEY_BASELINE_IMPORT, 0f).toDouble()
         val baselineExport = prefs.getFloat(KEY_BASELINE_EXPORT, 0f).toDouble()
+        val baselineImportT1 = prefs.getFloat(KEY_BASELINE_IMPORT_T1, 0f).toDouble()
+        val baselineImportT2 = prefs.getFloat(KEY_BASELINE_IMPORT_T2, 0f).toDouble()
+        val baselineExportT1 = prefs.getFloat(KEY_BASELINE_EXPORT_T1, 0f).toDouble()
+        val baselineExportT2 = prefs.getFloat(KEY_BASELINE_EXPORT_T2, 0f).toDouble()
         val baselineDate = prefs.getString(KEY_BASELINE_DATE, "") ?: ""
-        return HubConfig(relayUrl, homeId, kioskUrl, syncToken, baselineImport, baselineExport, baselineDate)
+        return HubConfig(relayUrl, homeId, kioskUrl, syncToken, baselineImport, baselineExport, baselineImportT1, baselineImportT2, baselineExportT1, baselineExportT2, baselineDate)
     }
 
     fun saveConfig(config: HubConfig) {
@@ -40,6 +48,10 @@ class HubConfigStore(context: Context) {
             .putString(KEY_SYNC_TOKEN, config.syncToken)
             .putFloat(KEY_BASELINE_IMPORT, config.baselineImportKwh.toFloat())
             .putFloat(KEY_BASELINE_EXPORT, config.baselineExportKwh.toFloat())
+            .putFloat(KEY_BASELINE_IMPORT_T1, config.baselineImportT1Kwh.toFloat())
+            .putFloat(KEY_BASELINE_IMPORT_T2, config.baselineImportT2Kwh.toFloat())
+            .putFloat(KEY_BASELINE_EXPORT_T1, config.baselineExportT1Kwh.toFloat())
+            .putFloat(KEY_BASELINE_EXPORT_T2, config.baselineExportT2Kwh.toFloat())
             .putString(KEY_BASELINE_DATE, config.baselineDate)
             .apply()
     }
@@ -96,10 +108,18 @@ class HubConfigStore(context: Context) {
     /** Saves the MVM billing baseline (elszámolási nyitóértékek).
      *  These are the P1 meter cumulative readings on the last official
      *  MVM reading date, used to compute yearly import/export deltas. */
-    fun saveBaseline(importKwh: Double, exportKwh: Double, date: String) {
+    fun saveBaseline(
+        importKwh: Double, exportKwh: Double, date: String,
+        importT1: Double = 0.0, importT2: Double = 0.0,
+        exportT1: Double = 0.0, exportT2: Double = 0.0
+    ) {
         prefs.edit()
             .putFloat(KEY_BASELINE_IMPORT, importKwh.toFloat())
             .putFloat(KEY_BASELINE_EXPORT, exportKwh.toFloat())
+            .putFloat(KEY_BASELINE_IMPORT_T1, importT1.toFloat())
+            .putFloat(KEY_BASELINE_IMPORT_T2, importT2.toFloat())
+            .putFloat(KEY_BASELINE_EXPORT_T1, exportT1.toFloat())
+            .putFloat(KEY_BASELINE_EXPORT_T2, exportT2.toFloat())
             .putString(KEY_BASELINE_DATE, date)
             .apply()
     }
@@ -124,6 +144,10 @@ class HubConfigStore(context: Context) {
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
         private const val KEY_BASELINE_IMPORT = "baseline_import_kwh"
         private const val KEY_BASELINE_EXPORT = "baseline_export_kwh"
+        private const val KEY_BASELINE_IMPORT_T1 = "baseline_import_t1_kwh"
+        private const val KEY_BASELINE_IMPORT_T2 = "baseline_import_t2_kwh"
+        private const val KEY_BASELINE_EXPORT_T1 = "baseline_export_t1_kwh"
+        private const val KEY_BASELINE_EXPORT_T2 = "baseline_export_t2_kwh"
         private const val KEY_BASELINE_DATE = "baseline_date"
     }
 }

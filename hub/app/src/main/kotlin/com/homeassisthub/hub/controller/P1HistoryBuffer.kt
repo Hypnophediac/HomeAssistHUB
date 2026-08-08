@@ -22,7 +22,11 @@ object P1HistoryBuffer {
         val powerImportW: Double,
         val powerExportW: Double,
         val importTotalKwh: Double,
-        val exportTotalKwh: Double
+        val exportTotalKwh: Double,
+        val importT1Kwh: Double = 0.0,
+        val importT2Kwh: Double = 0.0,
+        val exportT1Kwh: Double = 0.0,
+        val exportT2Kwh: Double = 0.0
     ) {
         /** Net grid power: positive = importing, negative = exporting. */
         val netGridW: Double get() = powerImportW - powerExportW
@@ -117,7 +121,11 @@ object P1HistoryBuffer {
                 powerImportW = 0.0,
                 powerExportW = 0.0,
                 importTotalKwh = importTotalKwh,
-                exportTotalKwh = exportTotalKwh
+                exportTotalKwh = exportTotalKwh,
+                importT1Kwh = 0.0,
+                importT2Kwh = 0.0,
+                exportT1Kwh = 0.0,
+                exportT2Kwh = 0.0
             )
             android.util.Log.i("P1HistoryBuffer", "Restored baseline from DB: import=${importTotalKwh}kWh export=${exportTotalKwh}kWh ts=$timestamp")
         }

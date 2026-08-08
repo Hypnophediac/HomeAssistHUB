@@ -32,7 +32,7 @@ Android foreground service, ami folyamatosan fut az otthoni telefonon.
 - **`P1MeterController`** — percenként lekérdezi a P1 smart metert (HTTP JSON), feldolgozza a 3-fázisú adatokat (import/export per fázis, feszültség, áram, teljesítménytényező).
 - **`HuaweiCloudScraper`** — ~5 percenként scrape-eli a Huawei FusionSolar Kiosk API-t (napelem termelés, napi yield kWh). A P1 adatot T-5 perccel korábbi olvasattal szinkronizálja a ház fogyasztás pontos számításához.
 - **`P1HistoryBuffer`** — in-memory ring buffer (10 perc), ami a P1 olvasatokat tárolja a T-5 perces szinkronizációhoz. Éjféli kWh baseline-t is követ a napi delta számításhoz.
-- **`InverterLiveData`** — singleton, ami a legfrissebb inverter adatokat tartja (activePowerW, realConsumptionW, dailyEnergyKwh).
+- **`InverterLiveData`** — singleton, ami a legfrissebb inverter adatokat tartja (activePowerW, realConsumptionW, dailyEnergyKwh). A `realConsumptionW` EMA szűrött (alpha=0.3) és `max(0, ...)` clamp-elt, hogy elkerülje a negatív/tüskés értékeket a T-5 perces szinkronizációs eltérések miatt.
 - **`CloudSyncManager`** — 2 percenként batch-eli a Room DB-ből a P1 raw + inverter olvasatokat és POST-olja a Render backendnek. **Két kurzor**: fő cursor (új adatok) és backfill cursor (7 nap gördülő ablak újra-szinkronizálása). A relay `bulkWrite` upsert-tel dolgozik (`{homeId, timestamp}` unique index), így a re-szinkron idempotens — MongoDB/Render adatvesztés esetén automatikusan újra feltöltődik. Offline eset a Room DB szolgál pufferként.
 - **`CommandRouter`** — Socket.IO parancskezelő (get_p1_history, get_energy_daily/weekly/monthly/yearly, get_live_snapshot, stb.).
 - **`HubApiServer`** — Ktor HTTP szerver (LAN-on), REST API a helyi hálózaton.
@@ -144,27 +144,58 @@ A Kiosk API ~5 perces késéssel dolgozik, ezért a P1 adatot T-5 perccel koráb
 
 ### Elszámolási nyitóértékek (MVM Baseline)
 
-A P1 mérőóra kumulált állásokat ad vissza (beüzemelés óta), így az éves fogyasztás/visszatáplálás számításához ismerni kell az utolsó hivatalos MVM leolvasás napján mért óraállásokat.
+A P1 mérőóra kumulált állásokat ad vissza (beüzemelés óta), így az éves fogyasztás/visszatáplálás számításához ismerni kell az utolsó hivatalos MVM leolvasás napján mért óraállásokat. A baseline támogatja a **tarifánkénti (T1/T2) bontást** is, így a tarifa váltás vagy különböző nappal/éjszaka tarifák esetén pontosabb az elszámolás.
 
 **Képlet:**
 ```
 Idei vételezés (Import) = current_import_total - baseline_import
 Idei visszatáplálás (Export) = current_export_total - baseline_export
 Éves egyenleg (kWh) = Idei vételezés - Idei visszatáplálás
+
+Tarifánként:
+Idei T1 import = current_importT1 - baseline_importT1
+Idei T2 import = current_importT2 - baseline_importT2
+Idei T1 export = current_exportT1 - baseline_exportT1
+Idei T2 export = current_exportT2 - baseline_exportT2
 ```
 
-**Tárolás:** `HubConfigStore` SharedPreferences — `baseline_import_kwh`, `baseline_export_kwh`, `baseline_date`
+**Tárolás:** `HubConfigStore` SharedPreferences — `baseline_import_kwh`, `baseline_export_kwh`, `baseline_import_t1_kwh`, `baseline_import_t2_kwh`, `baseline_export_t1_kwh`, `baseline_export_t2_kwh`, `baseline_date`
 
 **Beállítás helye:**
-- **Hub**: Dashboard → Beállítások → "Elszámolási nyitóértékek (MVM)" section
-- **Kliens**: Beállítások fül → "Elszámolási nyitóértékek (MVM)" kártya (Socket.IO `save_baseline` / `get_baseline` parancsok)
+- **Hub**: Dashboard → Beállítások → "Elszámolási nyitóértékek (MVM)" section (összesen + T1/T2 mezők)
+- **Kliens**: Beállítások fül → "Elszámolási nyitóértékek (MVM)" kártya (Socket.IO `save_baseline` / `get_baseline` parancsok, T1/T2 mezőkkel)
 
-**Megjelenítés:** Energia fül → Éves tab → BaselineCard (idei vételezés, visszatáplálás, éves egyenleg, jelenlegi óraállások)
+**Megjelenítés:** Energia fül → Éves tab → BaselineCard (idei vételezés, visszatáplálás, éves egyenleg, jelenlegi óraállások, tarifánkénti bontás + év végi számla becslő)
 
 **Adatforrás a `get_p1_history` válaszban:** `baseline` objektum, amely tartalmazza:
-- `baselineImportKwh`, `baselineExportKwh`, `baselineDate` — a mentett nyitóértékek
+- `baselineImportKwh`, `baselineExportKwh`, `baselineDate` — a mentett nyitóértékek (összesen)
+- `baselineImportT1Kwh`, `baselineImportT2Kwh`, `baselineExportT1Kwh`, `baselineExportT2Kwh` — tarifánkénti nyitóértékek
 - `currentImportTotalKwh`, `currentExportTotalKwh` — a P1 mérő jelenlegi kumulált állásai (`P1HistoryBuffer.latestSnapshot`)
-- `yearlyImportKwh`, `yearlyExportKwh`, `yearlyBalanceKwh` — számolt éves delták
+- `currentImportT1Kwh`, `currentImportT2Kwh`, `currentExportT1Kwh`, `currentExportT2Kwh` — tarifánkénti jelenlegi állások
+- `yearlyImportKwh`, `yearlyExportKwh`, `yearlyBalanceKwh` — számolt éves delták (összesen)
+- `yearlyImportT1Kwh`, `yearlyImportT2Kwh`, `yearlyExportT1Kwh`, `yearlyExportT2Kwh` — tarifánkénti éves delták
+
+### EMA házfogyasztás szűrés
+
+A `InverterLiveData.realConsumptionW` értéket exponenciális mozgóátlag (EMA) szűrővel simítjuk (alpha=0.5), hogy elkerüljük a tüskéket és negatív értékeket, amelyek a Kiosk API ~5 perces késéséből és a P1 valós idejű adatainak eltéréséből fakadnak. A szűrt érték `max(0, ...)` clamp-elésre kerül, így sosem lesz negatív. Ha az új érték >200W-ot eltér az EMA-tól, azonnal átugrik az új értékre (gyors konvergencia újraindítás után).
+
+**Fontos:** A dashboard `get_p1_history` válaszban a legfrissebb olvasat `realConsumptionW` értéke **a jelenlegi P1 + jelenlegi inverter** adatokból számolódik (nem a T-5 cache-elt EMA értékből), hogy a dashboardon megjelenített napelem/vételezés/betáplálás értékekkel időben konzisztens legyen. A T-5 szinkronizált EMA értéket csak a `HuaweiCloudScraper` használja belsőleg a naplózáshoz és a `InverterLiveData` cache-éhez.
+
+### MVM év végi számla becslő
+
+A `YearlyBillPredictor` widget (Energia fül → Éves tab → BaselineCard alján) szezonalitás-tudatos extrapolációval becsli az év végi szaldót és várható fizetendő összeget:
+- Napi átlag import/export az eddigi napok alapján
+- Szezonalitási tényező: téli hónapok (Nov-Feb) ~30% export, ~130% import; nyári hónapok (Máj-Aug) ~170% export, ~60% import
+- Becsült év végi költség: `projectedImport × 47 Ft/kWh - projectedExport × 28 Ft/kWh`
+- Célfogyasztás: napi max kWh a 0 Ft számlához
+
+### Fázisegyensúly indicator
+
+A `PhaseBalanceIndicator` (Dashboard → P1PowerCard alján) vizuálisan jelzi a három fázis közötti terhelés egyensúlytalanságot:
+- Zöld: <100% egyensúlytalanság (kiegyensúlyozott)
+- Sárga: 100-200% (mérsékelt)
+- Narancs: >200% (erős egyoldalú terhelés, javasolt fogyasztó átosztása)
+- Oszlopdiagram a fázisonkénti házfogyasztással (L1/L2/L3)
 
 ### Közvetlen elérés — böngészőből ellenőrzés
 
@@ -232,8 +263,9 @@ Android app, ami két adatforrást használ:
 | | Betáplálás (W) | `P1ReadingDto.powerExportW` | P1 meter `instantaneous_power_export` (összes fázis) |
 | **P1PowerCard — Feszültség** | L1/L2/L3 (V) | `P1ReadingDto.l1V/l2V/l3V` | P1 meter `voltage_phase_l1/l2/l3` |
 | **P1PowerCard — Áramerősség** | L1/L2/L3 (A) | `P1ReadingDto.l1A/l2A/l3A` | P1 meter `current_phase_l1/l2/l3` |
-| **PhasePowerChip** (L1/L2/L3) | Import/Export per fázis (W) | `P1ReadingDto.powerImportL1W.../powerExportL1W...` | Hub számolt: ha meter per-fázis érték >0, azt használja. Egyébként `V×Bl×PF` (balanced current × power factor). Irány az összesített import/export alapján: ha `importW=0` → minden fázis exportál; ha `exportW=0` → minden importál; ha mindkettő >0 → **brute-force 2^3=8 assignment**: minden fázis VAGY import VAGY export (nem mindkettő egyszerre), kiválasztva az az elrendezés, ahol a fázis teljesítmények összege legjobban illeszkedik az összesített import/export értékekhez, majd skálázva a pontos összegre |
-| **HousePhaseChip** (L1/L2/L3) | Ház fogyasztás per fázis (W) | Számolt | `solarPerPhase + importLxW - exportLxW`, ahol `solarPerPhase = (exportW - importW + houseW) / 3`. `houseW` = Hub T-5 szinkronizált `realConsumptionW`. `solarRealtime = exportW - importW + houseW` (valós idejű P1 + szinkronizált házfogyasztás) |
+| **PhasePowerChip** (L1/L2/L3) | Import/Export per fázis (W) | `P1ReadingDto.powerImportL1W.../powerExportL1W...` | Hub számolt: ha meter per-fázis érték >0, azt használja. Egyébként `V×Bl×PF` (balanced current × power factor). Irány az összesített import/export alapján: ha `importW=0` → minden fázis exportál; ha `exportW=0` → minden importál; ha mindkettő >0 → **brute-force 2^3=8 assignment**: minden fázis VAGY import VAGY export (nem mindkettő egyszerre), kiválasztva az az elrendezés, ahol a fázis teljesítmények összege legjobban illeszkedik az összesített import/export értékekhez, majd skálázva a pontos összegre. **Nulla áramú fázisok** (mérő felbontása alatt): a fennmaradó export/import egyenlően elosztva a nulla áramú fázisok között (szimmetrikus inverter miatt a napelem minden fázison termel/exportál) |
+| **HousePhaseChip** (L1/L2/L3) | Ház fogyasztás per fázis (W) | Számolt | `solarPerPhase + importLxW - exportLxW`, ahol `solarPerPhase = (exportW - importW + houseW) / 3`. `houseW` = Hub T-5 szinkronizált `realConsumptionW`. `solarRealtime = exportW - importW + houseW` (valós idejű P1 + szinkronizált házfogyasztás). Ha egy fázison import=0 és export=0 (mérő felbontása alatt) és a ház összességében exportál, akkor 0W mutatás (a napelem exportál, nem fogyaszt) |
+| **PhaseBalanceIndicator** | Fázisegyensúly oszlopdiagram + százalékos egyensúlytalanság | Számolt | `(maxW - minW) / avgW`, színkódolás: zöld <100%, sárga 100-200%, narancs >200% |
 | **P1HistoryChart** | Teljesítmény görbe (import/export/consumption) | `P1ReadingDto` lista (100-1440 pont) | Consumption = `realConsumptionW` (Hub T-5 szinkronizált). Inverter power = `inverterPowerW` (Hub `findInverterPower` 10 perces tolerance + valós idejű pont tárolása minden scrape-nél, mert a Kiosk powerCurve órákkal lemaradhat). **Catmull-Rom spline** (tension=0.5) sima görbékhez + **gradiens kitöltés** (25%→0% alpha) a vonalak alatt |
 | **FreshnessBadge** | Adatfrissesség (zöld/sárga/piros) | `P1ReadingDto.timestamp` | `now - timestamp`: <90s=Élő, <6p=X perce, >6p=Elavult |
 | **CloudSyncBadge** | Cloud sync státusz | `cloudSync.lastSyncTime` (Socket.IO válaszban) | `now - lastSyncTime`: <5p=syncél, <15p=Xp, >15p=Xp |
@@ -256,6 +288,7 @@ Android app, ami két adatforrást használ:
 | **ForecastCard — Mára várható** | kWh | Open-Meteo `shortwave_radiation` | `pvCapacityKwp * (radiation / 1000) * performanceRatio` óránként, összegezve |
 | **ForecastCard — Eddig termelt** | kWh | `dailySummary.inverterDailyKwh` | Hub Kiosk `dailyEnergy` |
 | **ForecastCard — Jelenleg** | °C, felhőzet % | Open-Meteo `temperature_2m`, `cloudcover` | Aktuális óra indexe |
+| **ForecastCard — Óránkénti oszlopdiagram** | kWh/óra | Open-Meteo `shortwave_radiation` óránként | `pvCapacityKwp * (radiation / 1000) * performanceRatio` per óra. Zöld oszlop = múlt (már termelt), narancs oszlop = jövő (előrejelzés). Y-tengely: kWh, X-tengely: óra (3 óránként címkézve) |
 | **SummaryCards (Napi tab)** | Vételezés/visszatáplálás (kWh) | Render `GET /daily` → `EnergyDailyResponseDto` | MongoDB P1RawReading aggregáció |
 | **SummaryCards — LiveStatCard** | Vételezés/visszatáplálás (W) | Render `latestPowerImportW/ExportW` | MongoDB legutolsó P1 olvasat |
 | **SummaryCards — Feszültség/Áram** | L1/L2/L3 V és A | Render `latestL1V.../latestL1A...` | MongoDB legutolsó P1 olvasat |
@@ -273,7 +306,7 @@ Android app, ami két adatforrást használ:
 | **PeriodSummaryCards — Önfogyasztási arány** | % | Számolt kliens oldalon | `((totalProducedKwh - totalExportedKwh) / totalProducedKwh) * 100` |
 | **EnergyColumnChart (Heti)** | Napi fogyasztás/visszatáplálás (kWh) | Render `entries[].consumedKwh/exportedKwh` | Label: `Hé, Ke, Sze, Cs, Pé, Szo, Va` |
 | **EnergyColumnChart (Havi/Éves/Egyedi)** | Napi/havi bontású fogyasztás/visszatáplálás | Render `entries[].consumedKwh/exportedKwh` | MongoDB aggregáció, dinamikus Y-tengely |
-| **BaselineCard (Éves tab)** | Idei vételezés/visszatáplálás/egyenleg (kWh), jelenlegi óraállások | Socket.IO `get_p1_history` → `baseline` objektum | `currentTotal - baseline` (Hub oldalon számolva) |
+| **BaselineCard (Éves tab)** | Idei vételezés/visszatáplálás/egyenleg (kWh), tarifánkénti T1/T2 bontás, jelenlegi óraállások, **év végi számla becslő** (szezonalitás-tudatos extrapoláció Ft-ban) | Socket.IO `get_p1_history` → `baseline` objektum | `currentTotal - baseline` (Hub oldalon számolva), `YearlyBillPredictor` kliens oldalon |
 | **EnergyDateRangePicker** | Dátumtartomány választó | Material3 `DateRangePicker` | UTC `yyyy-MM-dd` formátum |
 
 #### 3. Kamera fül (`CameraScreen.kt`)
@@ -298,7 +331,7 @@ Android app, ami két adatforrást használ:
 | **SavedDevicesCard** | Mentett eszközök listája | Hub `list_devices` parancs | Hub `delete_credential` |
 | **KioskUrlCard** | Huawei Kiosk URL | Hub `save_kiosk_url` / `get_kiosk_url` | Hub `HubConfigStore` |
 | **BaselineSettingsCard** | Nyitó vételezés/visszatáplálás (kWh), leolvasás dátuma | Hub `save_baseline` / `get_baseline` | Hub `HubConfigStore` (SharedPreferences) |
-| **PvForecastCard** | GPS lat/long, PV kapacitás (kWp), rendszert hatásfok (%) | `ClientConfigStore` (SharedPreferences) | Lokális mentés |
+| **PvForecastCard** | Helyszín neve (pl. "Budapest"), PV kapacitás (kWp), rendszer hatásfok (%) | `ClientConfigStore` (SharedPreferences) | Helyszínnév → Open-Meteo Geocoding API → lat/lon feloldás, majd lokális mentés |
 
 ### Téma
 

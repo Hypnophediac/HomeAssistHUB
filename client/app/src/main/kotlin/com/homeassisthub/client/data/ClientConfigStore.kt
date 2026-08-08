@@ -13,7 +13,8 @@ data class PvForecastConfig(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val pvCapacityKwp: Double? = null,
-    val performanceRatio: Double = 0.80
+    val performanceRatio: Double = 0.80,
+    val locationName: String = ""
 ) {
     val isConfigured: Boolean get() = latitude != null && longitude != null && pvCapacityKwp != null && pvCapacityKwp > 0.0
 }
@@ -49,7 +50,8 @@ class ClientConfigStore(context: Context) {
         val lon = if (prefs.contains(KEY_LONGITUDE)) prefs.getFloat(KEY_LONGITUDE, 0f).toDouble() else null
         val kwp = if (prefs.contains(KEY_PV_CAPACITY)) prefs.getFloat(KEY_PV_CAPACITY, 0f).toDouble() else null
         val ratio = prefs.getFloat(KEY_PERFORMANCE_RATIO, 0.80f).toDouble()
-        return PvForecastConfig(lat, lon, kwp, ratio)
+        val locName = prefs.getString(KEY_LOCATION_NAME, "") ?: ""
+        return PvForecastConfig(lat, lon, kwp, ratio, locName)
     }
 
     fun savePvForecastConfig(config: PvForecastConfig) {
@@ -58,6 +60,7 @@ class ClientConfigStore(context: Context) {
             if (config.longitude != null) putFloat(KEY_LONGITUDE, config.longitude.toFloat()) else remove(KEY_LONGITUDE)
             if (config.pvCapacityKwp != null) putFloat(KEY_PV_CAPACITY, config.pvCapacityKwp.toFloat()) else remove(KEY_PV_CAPACITY)
             putFloat(KEY_PERFORMANCE_RATIO, config.performanceRatio.toFloat())
+            putString(KEY_LOCATION_NAME, config.locationName)
         }.apply()
     }
 
@@ -71,5 +74,6 @@ class ClientConfigStore(context: Context) {
         private const val KEY_LONGITUDE = "pv_longitude"
         private const val KEY_PV_CAPACITY = "pv_capacity_kwp"
         private const val KEY_PERFORMANCE_RATIO = "pv_performance_ratio"
+        private const val KEY_LOCATION_NAME = "pv_location_name"
     }
 }

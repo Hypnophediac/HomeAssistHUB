@@ -510,31 +510,77 @@ private fun BaselineConfigSection(hubConfigStore: HubConfigStore) {
     val hubConfig = hubConfigStore.getConfig()
     var importKwh by remember { mutableStateOf(hubConfig?.baselineImportKwh?.toString() ?: "") }
     var exportKwh by remember { mutableStateOf(hubConfig?.baselineExportKwh?.toString() ?: "") }
+    var importT1 by remember { mutableStateOf(hubConfig?.baselineImportT1Kwh?.let { if (it == 0.0) "" else it.toString() } ?: "") }
+    var importT2 by remember { mutableStateOf(hubConfig?.baselineImportT2Kwh?.let { if (it == 0.0) "" else it.toString() } ?: "") }
+    var exportT1 by remember { mutableStateOf(hubConfig?.baselineExportT1Kwh?.let { if (it == 0.0) "" else it.toString() } ?: "") }
+    var exportT2 by remember { mutableStateOf(hubConfig?.baselineExportT2Kwh?.let { if (it == 0.0) "" else it.toString() } ?: "") }
     var date by remember { mutableStateOf(hubConfig?.baselineDate ?: "") }
     var savedMessage by remember { mutableStateOf<String?>(null) }
 
     Text("Elszámolási nyitóértékek (MVM)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
     Text(
-        "A P1 mérőóra kumulált állásai az utolsó hivatalos leolvasás napján. Ezekből számolódik az éves vételezés/visszatáplálás.",
+        "A P1 mérőóra kumulált állásai az utolsó hivatalos leolvasás napján. Ezekből számolódik az éves vételezés/visszatáplálás. A tarifánkénti (T1/T2) értékek opcionálisak, de ha megadod, külön is látható lesz a bontás.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     OutlinedTextField(
         value = importKwh,
         onValueChange = { importKwh = it.filter { c -> c.isDigit() || c == '.' } },
-        label = { Text("Nyitó vételezés (kWh)") },
+        label = { Text("Nyitó vételezés összesen (kWh)") },
         placeholder = { Text("8779.0") },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = importT1,
+            onValueChange = { importT1 = it.filter { c -> c.isDigit() || c == '.' } },
+            label = { Text("Import T1 (nappal)") },
+            placeholder = { Text("5000.0") },
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = importT2,
+            onValueChange = { importT2 = it.filter { c -> c.isDigit() || c == '.' } },
+            label = { Text("Import T2 (éjszaka)") },
+            placeholder = { Text("3779.0") },
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+    }
     OutlinedTextField(
         value = exportKwh,
         onValueChange = { exportKwh = it.filter { c -> c.isDigit() || c == '.' } },
-        label = { Text("Nyitó visszatáplálás (kWh)") },
+        label = { Text("Nyitó visszatáplálás összesen (kWh)") },
         placeholder = { Text("5000.0") },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = exportT1,
+            onValueChange = { exportT1 = it.filter { c -> c.isDigit() || c == '.' } },
+            label = { Text("Export T1") },
+            placeholder = { Text("3000.0") },
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = exportT2,
+            onValueChange = { exportT2 = it.filter { c -> c.isDigit() || c == '.' } },
+            label = { Text("Export T2") },
+            placeholder = { Text("2000.0") },
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+    }
     OutlinedTextField(
         value = date,
         onValueChange = { date = it },
@@ -548,10 +594,14 @@ private fun BaselineConfigSection(hubConfigStore: HubConfigStore) {
         val exp = exportKwh.trim().toDoubleOrNull()
         val dt = date.trim()
         if (imp == null || exp == null || dt.isBlank()) {
-            savedMessage = "Minden mező kitöltése kötelező!"
+            savedMessage = "Az összes és dátum mezők kötelezők!"
             return@Button
         }
-        hubConfigStore.saveBaseline(imp, exp, dt)
+        val iT1 = importT1.trim().toDoubleOrNull() ?: 0.0
+        val iT2 = importT2.trim().toDoubleOrNull() ?: 0.0
+        val eT1 = exportT1.trim().toDoubleOrNull() ?: 0.0
+        val eT2 = exportT2.trim().toDoubleOrNull() ?: 0.0
+        hubConfigStore.saveBaseline(imp, exp, dt, iT1, iT2, eT1, eT2)
         savedMessage = "Baseline mentve!"
     }) {
         Text("Mentés")

@@ -356,6 +356,20 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 // Per-phase house consumption (solar/3 + import - export)
+                // When a phase has 0 import AND 0 export from P1 meter (below
+                // meter resolution), and the house is net exporting, the solar
+                // on that phase is being exported — show 0W, not solarPerPhase.
+                val solarRealtime = maxOf(0.0,
+                    (lp?.exportW ?: 0.0) - (lp?.importW ?: 0.0) + (lp?.houseW ?: 0.0))
+                val solarPerPhase = solarRealtime / 3.0
+                val isNetExporting = (lp?.exportW ?: 0.0) > (lp?.importW ?: 0.0)
+                fun phaseHouseW(impLx: Double, expLx: Double): Double {
+                    return if (impLx == 0.0 && expLx == 0.0 && isNetExporting) {
+                        0.0
+                    } else {
+                        maxOf(0.0, solarPerPhase + impLx - expLx)
+                    }
+                }
                 Text(
                     text = "Fázisonkénti házfogyasztás",
                     style = MaterialTheme.typography.labelSmall,
@@ -366,28 +380,25 @@ private fun P1PowerCard(readings: List<P1ReadingDto>, livePower: LivePowerData?)
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Per-phase house consumption = solarPerPhase + importLx - exportLx
-                    // solarPerPhase derived from realtime P1 + synced houseW:
-                    //   solarRealtime = exportW - importW + houseW (all from Hub)
-                    //   solarPerPhase = solarRealtime / 3 (symmetrical inverter)
-                    // Hub's per-phase import/export now uses direction-from-totals
-                    // (if totalImport=0 → all export; if totalExport=0 → all import).
-                    val solarRealtime = maxOf(0.0,
-                        (lp?.exportW ?: 0.0) - (lp?.importW ?: 0.0) + (lp?.houseW ?: 0.0))
-                    val solarPerPhase = solarRealtime / 3.0
                     HousePhaseChip(
                         label = "L1",
-                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL1W ?: 0.0) - (lp?.powerExportL1W ?: 0.0))
+                        houseW = phaseHouseW(lp?.powerImportL1W ?: 0.0, lp?.powerExportL1W ?: 0.0)
                     )
                     HousePhaseChip(
                         label = "L2",
-                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL2W ?: 0.0) - (lp?.powerExportL2W ?: 0.0))
+                        houseW = phaseHouseW(lp?.powerImportL2W ?: 0.0, lp?.powerExportL2W ?: 0.0)
                     )
                     HousePhaseChip(
                         label = "L3",
-                        houseW = maxOf(0.0, solarPerPhase + (lp?.powerImportL3W ?: 0.0) - (lp?.powerExportL3W ?: 0.0))
+                        houseW = phaseHouseW(lp?.powerImportL3W ?: 0.0, lp?.powerExportL3W ?: 0.0)
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                PhaseBalanceIndicator(
+                    l1W = phaseHouseW(lp?.powerImportL1W ?: 0.0, lp?.powerExportL1W ?: 0.0),
+                    l2W = phaseHouseW(lp?.powerImportL2W ?: 0.0, lp?.powerExportL2W ?: 0.0),
+                    l3W = phaseHouseW(lp?.powerImportL3W ?: 0.0, lp?.powerExportL3W ?: 0.0)
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 P1HistoryChart(readings = readings)
             }
@@ -467,6 +478,105 @@ private fun HousePhaseChip(label: String, houseW: Double) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun PhaseBalanceIndicator(l1W: Double, l2W: Double, l3W: Double) {
+    val phases = listOf("L1" to l1W, "L2" to l2W, "L3" to l3W)
+    val total = l1W + l2W + l3W
+    if (total <= 0.0) return
+
+    val avg = total / 3.0
+    val maxW = maxOf(l1W, l2W, l3W)
+    val minW = minOf(l1W, l2W, l3W)
+    val imbalanceRatio = if (avg > 0) (maxW - minW) / avg else 0.0
+
+    val warningColor = when {
+        imbalanceRatio > 2.0 -> Color(0xFFE65100) // orange — severe imbalance
+        imbalanceRatio > 1.0 -> Color(0xFFF9A825) // yellow — moderate
+        else -> Color(0xFF2E7D32) // green — balanced
+    }
+
+    val warningText = when {
+        imbalanceRatio > 2.0 -> "Erős egyoldalú terhelés! Érdemes átosztani a fogyasztókat."
+        imbalanceRatio > 1.0 -> "Mérsékelt egyensúlytalanság a fázisok között."
+        else -> null
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = warningColor.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Fázisegyensúly",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = warningColor
+                )
+                Text(
+                    text = "%.0f%%".format(imbalanceRatio * 100),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = warningColor
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                phases.forEach { (label, w) ->
+                    val barHeight = if (maxW > 0) (w / maxW).coerceIn(0.0, 1.0) else 0.0
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height((barHeight * 60).dp.coerceAtLeast(2.dp)),
+                                color = warningColor.copy(alpha = 0.6f + barHeight.toFloat() * 0.4f),
+                                shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
+                            ) {}
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatW(w),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (w == maxW && imbalanceRatio > 1.0) warningColor else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+            warningText?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = warningColor
+                )
+            }
+        }
     }
 }
 
