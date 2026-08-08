@@ -30,7 +30,7 @@ Android foreground service, ami folyamatosan fut az otthoni telefonon.
 
 - **`HubForegroundService`** — foreground service, ami elindítja a P1 pollert, Kiosk scrapert, Socket.IO klienst, CloudSyncManagert és az éjféli napi összegző workert.
 - **`P1MeterController`** — percenként lekérdezi a P1 smart metert (HTTP JSON), feldolgozza a 3-fázisú adatokat (import/export per fázis, feszültség, áram, teljesítménytényező).
-- **`HuaweiCloudScraper`** — ~5 percenként scrape-eli a Huawei FusionSolar Kiosk API-t (napelem termelés, napi yield kWh). A P1 adatot T-5 perccel korábbi olvasattal szinkronizálja a ház fogyasztás pontos számításához.
+- **`HuaweiCloudScraper`** — ~5 percenként scrape-eli a Huawei FusionSolar Kiosk API-t (napelem termelés, napi yield kWh). A P1 adatot T-5 perccel korábbi olvasattal szinkronizálja a ház fogyasztás pontos számításához. A `realKpi.dailyEnergy` (hardver számláló) értékét `dailyEnergyKwh`-ként tárolja az `InverterHistoryEntity`-ben; a `powerCurve` pontoknál integrálással (5-min × kW) számolja a cumulative kWh-t. Ez lehetővé teszi a relay-ben az óránkénti termelés pontos kiszámítását (delta per óra).
 - **`P1HistoryBuffer`** — in-memory ring buffer (10 perc), ami a P1 olvasatokat tárolja a T-5 perces szinkronizációhoz. Éjféli kWh baseline-t is követ a napi delta számításhoz.
 - **`InverterLiveData`** — singleton, ami a legfrissebb inverter adatokat tartja (activePowerW, realConsumptionW, dailyEnergyKwh). A `realConsumptionW` EMA szűrött (alpha=0.3) és `max(0, ...)` clamp-elt, hogy elkerülje a negatív/tüskés értékeket a T-5 perces szinkronizációs eltérések miatt.
 - **`CloudSyncManager`** — 2 percenként batch-eli a Room DB-ből a P1 raw + inverter olvasatokat és POST-olja a Render backendnek. **Két kurzor**: fő cursor (új adatok) és backfill cursor (7 nap gördülő ablak újra-szinkronizálása). A relay `bulkWrite` upsert-tel dolgozik (`{homeId, timestamp}` unique index), így a re-szinkron idempotens — MongoDB/Render adatvesztés esetén automatikusan újra feltöltődik. Offline eset a Room DB szolgál pufferként.
@@ -39,7 +39,7 @@ Android foreground service, ami folyamatosan fut az otthoni telefonon.
 - **`HubLogBuffer`** — in-memory ring buffer (200 bejegyzés), ami a szolgáltatás komponenseinek logjait gyűjti a dashboard log viewer számára.
 - **`DailyStatsCalculator`** — napi statisztikák számítása (összes fogyasztás, export, self-consumption ratio = (produced - exported) / produced).
 
-### Room DB (v7)
+### Room DB (v8)
 
 Adatbázis fájl: `homeassist_hub.db` (SQLite, az app private data könyvtárában)
 
@@ -92,6 +92,7 @@ Adatbázis fájl: `homeassist_hub.db` (SQLite, az app private data könyvtáráb
 | `id` | Long (PK, autoGen) | Auto-increment |
 | `timestamp` | Long | Epoch millis |
 | `activePowerW` | Double | Inverter aktív teljesítmény (W) |
+| `dailyEnergyKwh` | Double | Kumulatív napi yield (kWh) — Kiosk `realKpi.dailyEnergy` hardver számlálóból, vagy power curve integrálásból (v8 migration) |
 
 **`inverter_daily_summary`** — napi napelem yield (éjféli snapshot a Kiosk `dailyEnergy` értékből)
 
